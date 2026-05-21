@@ -1,0 +1,11 @@
+# Ignorar o ambiente virtual local e arquivos temporários/sensíveis
+venv/
+.env
+__pycache__/
+*.pyc
+.git/
+.gitignore
+*.log
+.system_generated/
+Dockerfile
+.dockerignore

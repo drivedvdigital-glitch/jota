@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extrator de Produtos Universal</title>
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --accent-primary: #8b5cf6;
+            --accent-secondary: #06b6d4;
+            --text-main: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --glow: 0 0 20px rgba(139, 92, 246, 0.4);
+            --glow-secondary: 0 0 20px rgba(6, 182, 212, 0.4);
+            --font-main: 'Inter', sans-serif;
+            --font-title: 'Outfit', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 10% 10%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 90% 90%, rgba(6, 182, 212, 0.15) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            font-family: var(--font-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 2rem 1rem;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Header Style */
+        header {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        header h1 {
+            font-family: var(--font-title);
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #a78bfa 0%, #22d3ee 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            letter-spacing: -1px;
+            text-shadow: 0 0 40px rgba(139, 92, 246, 0.1);
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+
+        /* Glassmorphism Card Wrapper */
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        /* Search / Input Section */
+        .search-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .search-box-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            border-radius: 14px;
+            background: rgba(10, 15, 30, 0.8);
+            border: 2px solid var(--border-color);
+            padding: 0.25rem;
+        }
+
+        .search-box-wrapper:focus-within {
+            border-color: var(--accent-primary);
+            box-shadow: var(--glow);
+        }
+
+        .search-box-wrapper i {
+            position: absolute;
+            left: 1.25rem;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+        }
+
+        .search-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-main);
+            font-size: 1rem;
+            padding: 1rem 1rem 1rem 3rem;
+            font-family: var(--font-main);
+        }
+
+        .search-button {
+            background: linear-gradient(135deg, var(--accent-primary) 0%, #7c3aed 100%);
+            border: none;
+            outline: none;
+            color: white;
+            padding: 0.9rem 2rem;
+            border-radius: 11px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+        }
+
+        .search-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--glow);
+        }
+
+        .search-button:active {
+            transform: translateY(0);
+        }
+
+        /* Loading Spinner */
+        .loader-wrapper {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            padding: 3rem 0;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(6, 182, 212, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--accent-secondary);
+            animation: spin 1s ease-in-out infinite;
+            box-shadow: var(--glow-secondary);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: var(--text-secondary);
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        /* Error Box */
+        .error-box {
+            display: none;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+            padding: 1rem;
+            border-radius: 12px;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        
+        /* Copy Rica Section styling */
+        .copy-rica-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 1.5rem auto;
+            display: block;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        }
+        .copy-rica-content p, .copy-rica-content h1, .copy-rica-content h2, .copy-rica-content h3, .copy-rica-content h4 {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+            color: #e5e7eb;
+        }
+        .copy-rica-content h1, .copy-rica-content h2, .copy-rica-content h3 {
+            margin-top: 1.5rem;
+            font-weight: 700;
+        }
+        .copy-rica-content {
+            max-height: 600px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent-primary) rgba(255, 255, 255, 0.05);
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.01);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Results Layout */
+        .results-section {
+            display: none; /* Exibido dinamicamente */
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 2rem;
+            animation: fadeIn 0.6s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 800px) {
+            .results-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .info-card {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .product-header {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+
+        .product-title {
+            font-family: var(--font-title);
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.3;
+        }
+
+        .product-price {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--accent-secondary);
+            margin-top: 0.5rem;
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
+        }
+
+        .product-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .meta-title {
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+            margin-bottom: 0.25rem;
+        }
+
+        .seo-desc {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: #d1d5db;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 1rem;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .features-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .features-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            font-size: 0.95rem;
+            color: #e5e7eb;
+        }
+
+        .features-list li i {
+            color: #10b981;
+            margin-top: 0.25rem;
+        }
+
+        /* Images Gallery */
+        .images-card {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .main-image-wrapper {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #111827;
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .main-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .thumbnails-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+        }
+
+        .thumb-wrapper {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #111827;
+            border: 2px solid transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .thumb-wrapper.active {
+            border-color: var(--accent-primary);
+        }
+
+        .thumb-wrapper img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        /* Tabs and raw JSON section */
+        .tabs-container {
+            margin-top: 1rem;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+
+        .tab-btn.active {
+            color: var(--accent-primary);
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .json-viewer {
+            display: none;
+            background: #070a13;
+            color: #38bdf8;
+            font-family: monospace;
+            padding: 1.5rem;
+            border-radius: 12px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+        }
+
+        /* Shopify Actions Styles */
+        .shopify-actions-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            padding: 0.8rem 1.5rem;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            border: none;
+            outline: none;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .csv-btn {
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--accent-secondary);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+        }
+
+        .csv-btn:hover {
+            background: var(--accent-secondary);
+            color: #0c101b;
+            box-shadow: var(--glow-secondary);
+        }
+
+        .api-btn {
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--accent-primary);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        .api-btn:hover {
+            background: var(--accent-primary);
+            color: #fff;
+            box-shadow: var(--glow);
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: none !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+            color: var(--text-secondary) !important;
+            border-color: var(--border-color) !important;
+        }
+
+        .shopify-status-box {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.8rem 1.2rem;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            border: 1px solid transparent;
+        }
+
+        .status-info {
+            background: rgba(59, 130, 246, 0.1);
+            border-color: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+
+        .status-success {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        .status-success a {
+            color: #34d399;
+            text-decoration: underline;
+            font-weight: 600;
+        }
+
+        .status-error {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: auto;
+            padding-top: 3rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        footer a {
+            color: var(--accent-secondary);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1><i class="fa-solid fa-wand-magic-sparkles" style="margin-right: 10px; color: var(--accent-primary);"></i>Extrator de Produtos Universal</h1>
+            <p>Insira a URL de qualquer produto para extrair detalhes, preço, imagens e otimização de SEO de forma instantânea.</p>
+        </header>
+
+        <!-- Search input Card -->
+        <div class="glass-card">
+            <div class="search-section">
+                <form id="extract-form">
+                    <div class="search-box-wrapper">
+                        <i class="fa-solid fa-link"></i>
+                        <input 
+                            type="url" 
+                            id="product-url" 
+                            class="search-input" 
+                            placeholder="https://exemplo-ecommerce.com.br/produto-legal" 
+                            required
+                        >
+                        <button type="submit" class="search-button" id="submit-btn">
+                            <span>Extrair</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Error display -->
+                <div class="error-box" id="error-box">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span id="error-msg">Erro ao carregar dados. Tente novamente.</span>
+                </div>
+            </div>
+            
+            <!-- Loading Indicator -->
+            <div class="loader-wrapper" id="loader">
+                <div class="spinner"></div>
+                <div class="loading-text">Navegando e extraindo dados com Playwright & Gemini...</div>
+            </div>
+        </div>
+
+        <!-- Extraction Results Card -->
+        <div class="glass-card results-section" id="results-card">
+            <!-- Left Info Column -->
+            <div class="info-card">
+                <div class="product-header">
+                    <div class="product-title" id="res-title">Nome do Produto Extraído</div>
+                    <div class="product-price" id="res-price">R$ 0,00</div>
+                </div>
+
+                <div class="product-meta">
+                    <div>
+                        <div class="meta-title">Descrição Otimizada para SEO</div>
+                        <div class="seo-desc" id="res-seo-desc">Descrição otimizada retornada pelo Gemini...</div>
+                    </div>
+
+                    <div>
+                        <div class="meta-title">Benefícios Principais</div>
+                        <ul class="features-list" id="res-features">
+                            <!-- Benefícios carregados dinamicamente -->
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Ações Shopify -->
+                <div class="shopify-actions-group">
+                    <button type="button" class="action-btn csv-btn" id="export-csv-btn">
+                        <i class="fa-solid fa-file-csv"></i>
+                        <span>Exportar CSV Shopify</span>
+                    </button>
+                    <button type="button" class="action-btn api-btn" id="upload-api-btn">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>Enviar Direto p/ Shopify</span>
+                    </button>
+                </div>
+
+                <div class="shopify-status-box" id="shopify-status-box" style="display: none;">
+                    <i class="fa-solid fa-circle-info" id="status-icon"></i>
+                    <span id="shopify-status-msg">Enviando para Shopify...</span>
+                </div>
+            </div>
+
+            <!-- Right Image Column -->
+            <div class="images-card">
+                <div class="meta-title">Imagens Identificadas</div>
+                <div class="main-image-wrapper">
+                    <img src="" alt="Produto" class="main-image" id="res-main-img">
+                </div>
+                <div class="thumbnails-grid" id="res-thumbnails">
+                    <!-- Miniaturas carregadas dinamicamente -->
+                </div>
+            </div>
+
+            <!-- Full Width Copy Rica Column -->
+            <div class="copy-rica-section" style="grid-column: 1 / -1; margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 2rem;">
+                <div class="meta-title" style="font-size: 1.1rem; margin-bottom: 1rem;"><i class="fa-solid fa-file-invoice" style="margin-right: 8px; color: var(--accent-primary);"></i>Copy Rica do Produto (Texto, Imagens e GIFs)</div>
+                <div class="copy-rica-content" id="res-copy-rica">
+                    <!-- Copy HTML renderizada aqui -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Raw JSON Viewer Tabbed Section -->
+        <div class="glass-card tabs-container" id="json-card" style="display: none;">
+            <div class="tab-buttons">
+                <button class="tab-btn active" id="tab-visual-btn">Visualização Completa</button>
+                <button class="tab-btn" id="tab-json-btn">JSON Bruto</button>
+            </div>
+            <pre class="json-viewer" id="res-json">{}</pre>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        Desenvolvido com <i class="fa-solid fa-heart" style="color: #ef4444;"></i> usando FastAPI, Playwright e Google Gemini API.
+    </footer>
+
+    <script>
+        const form = document.getElementById('extract-form');
+        const urlInput = document.getElementById('product-url');
+        const submitBtn = document.getElementById('submit-btn');
+        const loader = document.getElementById('loader');
+        const errorBox = document.getElementById('error-box');
+        const errorMsg = document.getElementById('error-msg');
+        
+        const resultsCard = document.getElementById('results-card');
+        const jsonCard = document.getElementById('json-card');
+        
+        // Result fields
+        const resTitle = document.getElementById('res-title');
+        const resPrice = document.getElementById('res-price');
+        const resSeoDesc = document.getElementById('res-seo-desc');
+        const resFeatures = document.getElementById('res-features');
+        const resMainImg = document.getElementById('res-main-img');
+        const resThumbnails = document.getElementById('res-thumbnails');
+        const resJson = document.getElementById('res-json');
+        const resCopyRica = document.getElementById('res-copy-rica');
+
+        // Shopify fields
+        const exportCsvBtn = document.getElementById('export-csv-btn');
+        const uploadApiBtn = document.getElementById('upload-api-btn');
+        const shopifyStatusBox = document.getElementById('shopify-status-box');
+        const shopifyStatusMsg = document.getElementById('shopify-status-msg');
+        const statusIcon = document.getElementById('status-icon');
+
+        let currentProductData = null; // Guarda os dados do produto ativo
+
+        // Configuração de URL base dinâmica para suportar requisições mesmo rodando o HTML localmente (file://)
+        const getBaseUrl = () => {
+            const origin = window.location.origin;
+            if (origin.startsWith('file:') || origin === 'null' || !origin.includes(':8000')) {
+                return 'http://127.0.0.1:8000';
+            }
+            return '';
+        };
+        const BASE_URL = getBaseUrl();
+
+        // Tab fields
+        const tabVisualBtn = document.getElementById('tab-visual-btn');
+        const tabJsonBtn = document.getElementById('tab-json-btn');
+
+        tabVisualBtn.addEventListener('click', () => {
+            tabVisualBtn.classList.add('active');
+            tabJsonBtn.classList.remove('active');
+            resJson.classList.remove('active');
+            resultsCard.style.display = 'grid';
+        });
+
+        tabJsonBtn.addEventListener('click', () => {
+            tabJsonBtn.classList.add('active');
+            tabVisualBtn.classList.remove('active');
+            resJson.classList.add('active');
+            resultsCard.style.display = 'none';
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const url = urlInput.value.trim();
+            if (!url) return;
+
+            // Reset UI
+            errorBox.style.display = 'none';
+            resultsCard.style.display = 'none';
+            jsonCard.style.display = 'none';
+            loader.style.display = 'flex';
+            submitBtn.disabled = true;
+            
+            // Oculta e reseta a caixa de status do Shopify
+            shopifyStatusBox.style.display = 'none';
+            shopifyStatusBox.className = 'shopify-status-box';
+            shopifyStatusMsg.textContent = '';
+
+            try {
+                const response = await fetch(`${BASE_URL}/extrair`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Erro interno no servidor ao processar a requisição.');
+                }
+
+                const prod = data.produto;
+                currentProductData = prod; // Armazena o produto atualizado
+
+                // Populate fields
+                resTitle.textContent = prod.title;
+                resPrice.textContent = prod.price;
+                resSeoDesc.textContent = prod.seo_description;
+                resCopyRica.innerHTML = prod.description_html || '<p style="color: var(--text-secondary);">Nenhuma copy rica adicional encontrada.</p>';
+
+                // Load features list
+                resFeatures.innerHTML = '';
+                if (prod.features && prod.features.length > 0) {
+                    prod.features.forEach(feature => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${feature}</span>`;
+                        resFeatures.appendChild(li);
+                    });
+                } else {
+                    resFeatures.innerHTML = '<li>Nenhum benefício retornado</li>';
+                }
+
+                // Load Images
+                resThumbnails.innerHTML = '';
+                if (prod.images && prod.images.length > 0) {
+                    resMainImg.src = prod.images[0];
+                    resMainImg.style.display = 'block';
+
+                    prod.images.forEach((imgUrl, idx) => {
+                        const thumbWrapper = document.createElement('div');
+                        thumbWrapper.className = `thumb-wrapper ${idx === 0 ? 'active' : ''}`;
+                        thumbWrapper.innerHTML = `<img src="${imgUrl}" alt="Thumbnail ${idx}">`;
+                        
+                        thumbWrapper.addEventListener('click', () => {
+                            // Update active thumbnail
+                            document.querySelectorAll('.thumb-wrapper').forEach(w => w.classList.remove('active'));
+                            thumbWrapper.classList.add('active');
+                            // Update main image
+                            resMainImg.src = imgUrl;
+                        });
+
+                        resThumbnails.appendChild(thumbWrapper);
+                    });
+                } else {
+                    resMainImg.style.display = 'none';
+                    resThumbnails.innerHTML = '<span style="color: var(--text-secondary); font-size: 0.9rem;">Nenhuma imagem de alta qualidade encontrada.</span>';
+                }
+
+                // Load Raw JSON
+                resJson.textContent = JSON.stringify(data, null, 4);
+
+                // Show Results Card
+                resultsCard.style.display = 'grid';
+                jsonCard.style.display = 'block';
+                tabVisualBtn.click(); // Default to visual view
+
+            } catch (err) {
+                console.error(err);
+                errorMsg.textContent = err.message || 'Erro inesperado ao realizar raspagem.';
+                errorBox.style.display = 'flex';
+            } finally {
+                loader.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Evento para exportar como CSV compatível com Shopify
+        exportCsvBtn.addEventListener('click', async () => {
+            if (!currentProductData) return;
+
+            try {
+                // Desativa os botões para evitar cliques múltiplos
+                exportCsvBtn.disabled = true;
+                uploadApiBtn.disabled = true;
+
+                // Exibe status informativo
+                shopifyStatusBox.style.display = 'flex';
+                shopifyStatusBox.className = 'shopify-status-box status-info';
+                shopifyStatusMsg.textContent = 'Gerando arquivo CSV...';
+                statusIcon.className = 'fa-solid fa-circle-info';
+
+                const response = await fetch(`${BASE_URL}/exportar-csv`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(currentProductData)
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.detail || 'Erro ao gerar o CSV.');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                
+                // Pega o nome do arquivo do header Content-Disposition ou usa um padrão
+                let filename = `produto_${currentProductData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.csv`;
+                const disposition = response.headers.get('Content-Disposition');
+                if (disposition && disposition.indexOf('attachment') !== -1) {
+                    const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                    const matches = filenameRegex.exec(disposition);
+                    if (matches != null && matches[1]) { 
+                        filename = matches[1].replace(/['"]/g, '');
+                    }
+                }
+
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+
+                // Mostra sucesso
+                shopifyStatusBox.className = 'shopify-status-box status-success';
+                shopifyStatusMsg.textContent = 'CSV exportado com sucesso!';
+                statusIcon.className = 'fa-solid fa-circle-check';
+            } catch (err) {
+                console.error(err);
+                shopifyStatusBox.className = 'shopify-status-box status-error';
+                shopifyStatusMsg.textContent = err.message || 'Erro ao exportar CSV.';
+                statusIcon.className = 'fa-solid fa-circle-xmark';
+            } finally {
+                exportCsvBtn.disabled = false;
+                uploadApiBtn.disabled = false;
+            }
+        });
+
+        // Evento para enviar o produto diretamente à Shopify Admin API
+        uploadApiBtn.addEventListener('click', async () => {
+            if (!currentProductData) return;
+
+            try {
+                // Desativa os botões para evitar cliques múltiplos
+                exportCsvBtn.disabled = true;
+                uploadApiBtn.disabled = true;
+
+                // Exibe status informativo de envio
+                shopifyStatusBox.style.display = 'flex';
+                shopifyStatusBox.className = 'shopify-status-box status-info';
+                shopifyStatusMsg.textContent = 'Enviando produto para a Shopify...';
+                statusIcon.className = 'fa-solid fa-circle-info';
+
+                const response = await fetch(`${BASE_URL}/enviar-shopify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(currentProductData)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Erro ao enviar para a Shopify. Verifique suas credenciais.');
+                }
+
+                // Sucesso
+                shopifyStatusBox.className = 'shopify-status-box status-success';
+                statusIcon.className = 'fa-solid fa-circle-check';
+                
+                // Cria o link para visualizar o produto na Shopify
+                shopifyStatusMsg.innerHTML = `${data.message} <a href="${data.admin_url}" target="_blank" rel="noopener noreferrer">Ver produto no Shopify <i class="fa-solid fa-up-right-from-square" style="font-size: 0.8rem; margin-left: 2px;"></i></a>`;
+            } catch (err) {
+                console.error(err);
+                shopifyStatusBox.className = 'shopify-status-box status-error';
+                shopifyStatusMsg.textContent = err.message || 'Erro ao enviar produto para a Shopify.';
+                statusIcon.className = 'fa-solid fa-circle-xmark';
+            } finally {
+                exportCsvBtn.disabled = false;
+                uploadApiBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

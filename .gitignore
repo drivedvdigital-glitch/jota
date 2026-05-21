@@ -1,0 +1,9 @@
+# Ignorar ambiente virtual e chaves privadas do projeto
+venv/
+.env
+__pycache__/
+*.pyc
+*.log
+.system_generated/
+.idea/
+.vscode/
