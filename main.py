@@ -10,14 +10,21 @@ import csv
 import io
 import requests
 import unicodedata
-from fastapi import FastAPI, HTTPException, Response
+import time
+import base64
+import gc
+from concurrent.futures import ThreadPoolExecutor
+from io import BytesIO
+from PIL import Image, ImageSequence
+from bs4 import BeautifulSoup
+from fastapi import FastAPI, HTTPException, Response, Request
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from extractor import extract_product_data, ProdutoCompleto
 
 app = FastAPI(
-    title="Extrator de Produtos Universal",
+    title="EKopy",
     description="API de extração de dados estruturados de produtos usando Playwright e Gemini Pro, com exportação para Shopify",
     version="1.0.0"
 )
@@ -31,9 +38,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+
 # Modelo de requisição conforme o protótipo
 class RequestExtrair(BaseModel):
     url: str
+    creative_video_url: str = None
 
 # Modelo de resposta que encapsula o status e o produto completo
 class ResponseExtrair(BaseModel):
@@ -88,6 +98,261 @@ def clean_price(price_str: str) -> str:
             
     return cleaned
 
+def processar_imagem_pil(conteudo_binario: bytes, eh_gif: bool = False):
+    resultado = None
+    mime_type = None
+    ext = None
+    is_animated = False
+    
+    try:
+        with Image.open(BytesIO(conteudo_binario)) as img:
+            ja_otimizada = (img.format == 'WEBP')
+            is_animated = getattr(img, "is_animated", False)
+            
+            if is_animated or eh_gif:
+                is_animated = True
+                frames = []
+                for i, frame in enumerate(ImageSequence.Iterator(img)):
+                    f = frame.copy()
+                    if f.mode not in ("RGB", "RGBA"):
+                        f = f.convert("RGBA")
+                    if i == 0:
+                        pixels = f.load()
+                        if len(pixels[f.width-1, f.height-1]) == 4:
+                            r, g, b, a = pixels[f.width-1, f.height-1]
+                            pixels[f.width-1, f.height-1] = (r - 1 if r > 0 else r + 1, g, b, a)
+                        else:
+                            r, g, b = pixels[f.width-1, f.height-1]
+                            pixels[f.width-1, f.height-1] = (r - 1 if r > 0 else r + 1, g, b)
+                    frames.append(f)
+                
+                formato_saida = 'WEBP' if (img.format == 'WEBP' or (is_animated and not eh_gif)) else 'GIF'
+                with BytesIO() as output:
+                    if formato_saida == 'WEBP':
+                        frames[0].save(output, format='WEBP', save_all=True, append_images=frames[1:], loop=0, quality=85)
+                        mime_type, ext = "image/webp", "webp"
+                    else:
+                        frames[0].save(output, format='GIF', save_all=True, append_images=frames[1:], loop=0, optimize=True)
+                        mime_type, ext = "image/gif", "gif"
+                    resultado = output.getvalue()
+                
+                for f in frames:
+                    f.close()
+                del frames
+                
+            else:
+                if img.mode in ("RGBA", "P"): 
+                    img = img.convert("RGB")
+                    
+                with BytesIO() as output:
+                    if not ja_otimizada:
+                        img_resized = img.resize((int(img.width * 0.99), int(img.height * 0.99)), Image.LANCZOS)
+                        img_resized.save(output, format='WEBP', quality=90)
+                        img_resized.close() 
+                    else:
+                        pixels = img.load()
+                        r, g, b = pixels[img.width-1, img.height-1]
+                        pixels[img.width-1, img.height-1] = (r - 1 if r > 0 else r + 1, g, b)
+                        img.save(output, format='WEBP', lossless=True)
+                        
+                    resultado = output.getvalue()
+                mime_type, ext = "image/webp", "webp"
+    except Exception as e:
+        print(f"[ERRO processar_imagem_pil] {e}")
+        return None, None, None, False
+
+    del conteudo_binario
+    gc.collect() 
+    
+    return resultado, mime_type, ext, is_animated
+
+async def upload_arquivo_global_async(binario: bytes, nome_arquivo: str, mime_type: str, shop_name: str, token: str) -> str | None:
+    url = f"https://{shop_name}.myshopify.com/admin/api/2026-04/graphql.json"
+    headers = {"X-Shopify-Access-Token": token, "Content-Type": "application/json"}
+    
+    query_staged = """
+    mutation stagedUploadsCreate($input: [StagedUploadInput!]!) {
+      stagedUploadsCreate(input: $input) {
+        stagedTargets {
+          url
+          resourceUrl
+          parameters {
+            name
+            value
+          }
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+    """
+    
+    loop = asyncio.get_event_loop()
+    
+    try:
+        def post_staged():
+            return requests.post(
+                url,
+                headers=headers,
+                json={
+                    "query": query_staged,
+                    "variables": {
+                        "input": [{
+                            "filename": nome_arquivo,
+                            "mimeType": mime_type,
+                            "resource": "IMAGE",
+                            "httpMethod": "POST"
+                        }]
+                    }
+                },
+                timeout=15
+            )
+            
+        res_staged = await loop.run_in_executor(None, post_staged)
+        if res_staged.status_code != 200:
+            print(f"[stagedUploadsCreate] Erro HTTP {res_staged.status_code}: {res_staged.text}")
+            return None
+            
+        res_json = res_staged.json()
+        if "errors" in res_json:
+            print(f"[stagedUploadsCreate] Erros GraphQL: {res_json['errors']}")
+            
+        data = res_json.get('data')
+        if not isinstance(data, dict):
+            print(f"[stagedUploadsCreate] Data inválido ou nulo na resposta: {res_json}")
+            return None
+            
+        staged_upload_data = data.get('stagedUploadsCreate') or {}
+        user_errors = staged_upload_data.get('userErrors')
+        if user_errors:
+            print(f"[stagedUploadsCreate] userErrors: {user_errors}")
+            
+        staged_targets = staged_upload_data.get('stagedTargets', [])
+        if not staged_targets:
+            print(f"[stagedUploadsCreate] Não retornou stagedTargets: {res_json}")
+            return None
+            
+        target = staged_targets[0]
+        data_params = {p['name']: p['value'] for p in target['parameters']}
+        
+        def post_aws():
+            return requests.post(
+                target['url'],
+                data=data_params,
+                files={'file': (nome_arquivo, binario, mime_type)},
+                timeout=30
+            )
+            
+        res_aws = await loop.run_in_executor(None, post_aws)
+        if res_aws.status_code not in (200, 201, 204):
+            print(f"[AWS Upload] Erro status {res_aws.status_code}: {res_aws.text}")
+            return None
+            
+        query_create = """
+        mutation fileCreate($files: [FileCreateInput!]!) {
+          fileCreate(files: $files) {
+            files {
+              id
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+        """
+        
+        def post_create():
+            return requests.post(
+                url,
+                headers=headers,
+                json={
+                    "query": query_create,
+                    "variables": {
+                        "files": [{
+                            "originalSource": target['resourceUrl'],
+                            "contentType": "IMAGE"
+                        }]
+                    }
+                },
+                timeout=15
+            )
+            
+        res_create = await loop.run_in_executor(None, post_create)
+        if res_create.status_code != 200:
+            print(f"[fileCreate] Erro HTTP {res_create.status_code}: {res_create.text}")
+            return None
+            
+        res_create_json = res_create.json()
+        if "errors" in res_create_json:
+            print(f"[fileCreate] Erros GraphQL: {res_create_json['errors']}")
+            
+        create_data = res_create_json.get('data')
+        if not isinstance(create_data, dict):
+            print(f"[fileCreate] Data inválido ou nulo na resposta: {res_create_json}")
+            return None
+            
+        file_create_data = create_data.get('fileCreate') or {}
+        create_user_errors = file_create_data.get('userErrors')
+        if create_user_errors:
+            print(f"[fileCreate] userErrors: {create_user_errors}")
+            
+        files = file_create_data.get('files', [])
+        if not files:
+            print(f"[fileCreate] Não retornou arquivos: {res_create_json}")
+            return None
+            
+        file_id = files[0]['id']
+        
+        query_node = f"""
+        query {{
+          node(id: "{file_id}") {{
+            ... on MediaImage {{
+              image {{
+                url
+              }}
+            }}
+            ... on GenericFile {{
+              url
+            }}
+          }}
+        }}
+        """
+        
+        for _ in range(15):
+            await asyncio.sleep(2)
+            
+            def check_node():
+                return requests.post(
+                    url,
+                    headers=headers,
+                    json={"query": query_node},
+                    timeout=10
+                )
+                
+            res_node = await loop.run_in_executor(None, check_node)
+            if res_node.status_code == 200:
+                node_res_json = res_node.json()
+                if "errors" in node_res_json:
+                    print(f"[check_node] Erros GraphQL: {node_res_json['errors']}")
+                    
+                node_data_root = node_res_json.get('data')
+                if isinstance(node_data_root, dict):
+                    node_data = node_data_root.get('node')
+                    if node_data:
+                        final_url = node_data.get('image', {}).get('url') or node_data.get('url')
+                        if final_url:
+                            return final_url
+        
+        print(f"[Polling URL] Timeout ao aguardar URL final da imagem {file_id}")
+        return None
+        
+    except Exception as e:
+        print(f"[ERRO upload_arquivo_global_async] {e}")
+        return None
+
 @app.get("/", response_class=HTMLResponse)
 async def read_index():
     """
@@ -111,7 +376,8 @@ async def extrair_produto(request: RequestExtrair):
         raise HTTPException(status_code=400, detail="A URL fornecida deve iniciar com http:// ou https://")
         
     try:
-        dados_produto = await extract_product_data(url)
+        creative_video = request.creative_video_url.strip() if (request.creative_video_url and request.creative_video_url.strip()) else None
+        dados_produto = await extract_product_data(url, creative_video)
         return {
             "status": "sucesso",
             "produto": dados_produto
@@ -121,96 +387,6 @@ async def extrair_produto(request: RequestExtrair):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/exportar-csv")
-async def exportar_csv(produto: ProdutoCompleto):
-    """
-    Gera um arquivo CSV no formato de importação padrão da Shopify a partir dos dados do produto.
-    """
-    output = io.StringIO()
-    writer = csv.writer(output, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-    
-    # Cabeçalhos padrão exigidos pela Shopify para importação de produtos
-    headers = [
-        "Handle", "Title", "Body (HTML)", "Vendor", "Standard Product Type", 
-        "Custom Product Type", "Tags", "Published", "Option1 Name", 
-        "Option1 Value", "Option2 Name", "Option2 Value", "Option3 Name", 
-        "Option3 Value", "Variant SKU", "Variant Grams", "Variant Inventory Tracker", 
-        "Variant Inventory Qty", "Variant Inventory Policy", "Variant Fulfillment Service", 
-        "Variant Price", "Variant Compare At Price", "Variant Requires Shipping", 
-        "Variant Taxable", "Variant Barcode", "Image Src", "Image Position", 
-        "Image Alt Text", "Gift Card", "SEO Title", "SEO Description", 
-        "Google Shopping / Google Product Category", "Google Shopping / Gender", 
-        "Google Shopping / Age Group", "Google Shopping / MPN", 
-        "Google Shopping / AdWords Grouping", "Google Shopping / AdWords Labels", 
-        "Google Shopping / Condition", "Google Shopping / Custom Product", 
-        "Google Shopping / Custom Label 0", "Google Shopping / Custom Label 1", 
-        "Google Shopping / Custom Label 2", "Google Shopping / Custom Label 3", 
-        "Google Shopping / Custom Label 4", "Variant Image", "Variant Weight Unit", 
-        "Variant Tax Code", "Cost per item", "Price / International", 
-        "Compare At Price / International", "Status"
-    ]
-    
-    writer.writerow(headers)
-    
-    handle = slugify(produto.title)
-    
-    # Constrói o corpo do produto em HTML usando a descrição rica ou o fallback
-    body_html = produto.description_html
-    if not body_html:
-        features_html = "".join([f"<li>{f}</li>" for f in produto.features])
-        body_html = f"<p>{produto.seo_description}</p>"
-        if features_html:
-            body_html += f"<p><strong>Principais Benefícios:</strong></p><ul>{features_html}</ul>"
-        
-    # Limpa caracteres de moeda e formata o preço para ponto decimal usando a função clean_price
-    price_cleaned = clean_price(produto.price)
-    
-    # Primeira linha: Detalhes gerais do produto + primeira imagem
-    first_image = produto.images[0] if produto.images else ""
-    first_row = ["" for _ in range(len(headers))]
-    
-    first_row[headers.index("Handle")] = handle
-    first_row[headers.index("Title")] = produto.title
-    first_row[headers.index("Body (HTML)")] = body_html
-    first_row[headers.index("Vendor")] = "Extrator Universal"
-    first_row[headers.index("Published")] = "false"  # Desativa para rascunho
-    first_row[headers.index("Option1 Name")] = "Title"
-    first_row[headers.index("Option1 Value")] = "Default Title"
-    first_row[headers.index("Variant Price")] = price_cleaned
-    first_row[headers.index("Variant Grams")] = "0"
-    first_row[headers.index("Variant Inventory Tracker")] = "shopify"
-    first_row[headers.index("Variant Inventory Qty")] = "99"
-    first_row[headers.index("Variant Inventory Policy")] = "deny"
-    first_row[headers.index("Variant Fulfillment Service")] = "manual"
-    first_row[headers.index("Variant Requires Shipping")] = "true"
-    first_row[headers.index("Variant Taxable")] = "true"
-    first_row[headers.index("Image Src")] = first_image
-    if first_image:
-        first_row[headers.index("Image Position")] = "1"
-        first_row[headers.index("Image Alt Text")] = produto.title
-    first_row[headers.index("Status")] = "draft"  # Rascunho
-    
-    writer.writerow(first_row)
-    
-    # Linhas secundárias: Apenas para adicionar as imagens extras ao mesmo Handle
-    for idx, img_url in enumerate(produto.images[1:], start=2):
-        row = ["" for _ in range(len(headers))]
-        row[headers.index("Handle")] = handle
-        row[headers.index("Image Src")] = img_url
-        row[headers.index("Image Position")] = str(idx)
-        row[headers.index("Image Alt Text")] = f"{produto.title} - Imagen {idx}"
-        writer.writerow(row)
-        
-    csv_content = output.getvalue()
-    
-    return Response(
-        content=csv_content,
-        media_type="text/csv",
-        headers={
-            "Content-Disposition": f"attachment; filename=produto_{handle}.csv",
-            "Content-Transfer-Encoding": "binary"
-        }
-    )
 
 @app.post("/enviar-shopify")
 async def enviar_shopify(produto: ProdutoCompleto):
@@ -292,7 +468,76 @@ async def enviar_shopify(produto: ProdutoCompleto):
                     detail=f"Falha na autenticação OAuth da Shopify (Código {token_response.status_code}): {token_response.text}"
                 )
     
-    # Constrói o corpo do produto em HTML usando a descrição rica ou o fallback
+    # Processa as imagens da galeria de forma paralela assíncrona com conversão para WebP/GIF e limpeza de metadados
+    
+    async def processar_e_codificar_imagem_galeria(img_data, idx):
+        try:
+            loop = asyncio.get_event_loop()
+            
+            # Verifica se é uma imagem local base64 (enviada pelo frontend)
+            if img_data.startswith("data:image/"):
+                header, encoded = img_data.split(",", 1)
+                conteudo = base64.b64decode(encoded)
+                eh_gif = "image/gif" in header or "image/webp" in header
+            else:
+                # É uma URL HTTP
+                def download_img():
+                    return requests.get(img_data, timeout=15)
+                res = await loop.run_in_executor(None, download_img)
+                if res.status_code != 200:
+                    raise Exception(f"Erro HTTP {res.status_code}")
+                conteudo = res.content
+                eh_gif = img_data.lower().endswith('.gif')
+                
+            binario, mime_type, ext, is_animated = await loop.run_in_executor(
+                None, 
+                processar_imagem_pil, 
+                conteudo, 
+                eh_gif
+            )
+            
+            if binario:
+                filename = f"galeria_{idx}_{int(time.time())}.{ext}"
+                base64_data = base64.b64encode(binario).decode('utf-8')
+                return {
+                    "attachment": base64_data,
+                    "filename": filename,
+                    "alt": f"{produto.title} - Imagen {idx}",
+                    "is_gif": is_animated,
+                    "original_idx": idx
+                }
+        except Exception as e:
+            print(f"[ERRO galeria imagem {idx}] {e}")
+            
+        # Fallback para mídias HTTP se der erro e não for local base64
+        if not img_data.startswith("data:image/"):
+            return {
+                "src": img_data,
+                "alt": f"{produto.title} - Imagen {idx}",
+                "is_gif": img_data.lower().endswith('.gif'),
+                "original_idx": idx
+            }
+        return None
+
+    galeria_tasks = [processar_e_codificar_imagem_galeria(img, idx) for idx, img in enumerate(produto.images, start=1)]
+    resultados = await asyncio.gather(*galeria_tasks)
+    
+    shopify_images_payload = []
+    imagens_enviadas_meta = []
+    pos = 1
+    for img_res in resultados:
+        if img_res is not None:
+            imagens_enviadas_meta.append({
+                "original_idx": img_res.get("original_idx"),
+                "is_gif": img_res.get("is_gif", False),
+                "position_enviada": pos
+            })
+            pos += 1
+            # Mantém apenas chaves válidas para a criação REST do Shopify
+            payload_img = {k: v for k, v in img_res.items() if k in ["attachment", "filename", "alt", "src"]}
+            shopify_images_payload.append(payload_img)
+
+    # Inicialmente define o body_html
     body_html = produto.description_html
     if not body_html:
         features_html = "".join([f"<li>{f}</li>" for f in produto.features])
@@ -300,25 +545,38 @@ async def enviar_shopify(produto: ProdutoCompleto):
         if features_html:
             body_html += f"<p><strong>Principais Benefícios:</strong></p><ul>{features_html}</ul>"
         
+    # Evita enviar o base64 gigante no POST inicial (limite de 512KB do Shopify para body_html)
+    if body_html:
+        try:
+            soup_temp = BeautifulSoup(body_html, 'html.parser')
+            img_tags_temp = soup_temp.find_all('img')
+            for i, img_tag in enumerate(img_tags_temp):
+                img_src = img_tag.get('src', '')
+                if img_src and img_src.startswith('data:image/'):
+                    img_tag['src'] = f"https://placeholder.com/temp-image-{i+1}.webp"
+            body_html = str(soup_temp)
+        except Exception as e_clean:
+            print(f"[SHOPIFY UPLOAD] Erro ao limpar base64 do body_html inicial: {e_clean}")
+
     # Limpa caracteres de moeda e formata o preço para ponto decimal usando a função clean_price
     price_cleaned = clean_price(produto.price)
+
     
-    # Monta a lista de imagens para a Shopify com Alt Text para SEO/metadados
-    shopify_images = []
-    for idx, img in enumerate(produto.images, start=1):
-        shopify_images.append({
-            "src": img,
-            "alt": f"{produto.title} - Imagen {idx}"
-        })
+    # Sanitiza o handle sugerido pela IA ou cria um a partir do título caso venha em branco
+    print(f"[SHOPIFY UPLOAD] Handle recebido do frontend: {produto.handle}")
+    handle_cleaned = slugify(produto.handle) if (hasattr(produto, "handle") and produto.handle) else slugify(produto.title)
+    print(f"[SHOPIFY UPLOAD] Handle sanitizado para envio: {handle_cleaned}")
     
     # Payload para a API Admin REST da Shopify
     product_payload = {
         "product": {
             "title": produto.title,
+            "handle": handle_cleaned,
             "body_html": body_html,
-            "vendor": "Extrator Universal",
+            "vendor": "Ofertas Colombianas",
+            "product_type": "Otro",
             "status": "draft",  # Cria como rascunho
-            "images": shopify_images,
+            "images": shopify_images_payload,
             "variants": [
                 {
                     "price": price_cleaned,
@@ -342,12 +600,9 @@ async def enviar_shopify(produto: ProdutoCompleto):
     last_product_err = None
     for attempt in range(1, max_product_retries + 1):
         try:
-            # Executa chamada de API de forma síncrona dentro de um pool para não bloquear o loop de eventos
             loop = asyncio.get_event_loop()
-            
             def request_call():
                 return requests.post(url, json=product_payload, headers=headers, timeout=15)
-                
             response = await loop.run_in_executor(None, request_call)
             break
         except Exception as e:
@@ -360,6 +615,63 @@ async def enviar_shopify(produto: ProdutoCompleto):
         if response.status_code == 201:
             res_data = response.json()
             product_id = res_data["product"]["id"]
+            shopify_created_images = res_data["product"].get("images", [])
+            
+            # Reconstrói e mapeia as URLs da CDN do Shopify geradas
+            mapa_urls_cdn = {}
+            gif_cdn_url = None
+            
+            for meta in imagens_enviadas_meta:
+                idx_enviado = meta["position_enviada"] - 1
+                if idx_enviado < len(shopify_created_images):
+                    cdn_url = shopify_created_images[idx_enviado]["src"]
+                    mapa_urls_cdn[meta["original_idx"]] = cdn_url
+                    if meta["is_gif"] and not gif_cdn_url:
+                        gif_cdn_url = cdn_url
+                        
+            # Se houver body_html, substituímos as imagens internas pelos links definitivos do CDN do cliente
+            if produto.description_html:
+                soup = BeautifulSoup(produto.description_html, 'html.parser')
+                img_tags = soup.find_all('img')
+                if img_tags:
+                    # 1ª imagem da copy -> se for GIF, usa o GIF. Senão usa a 1ª imagem da galeria.
+                    if gif_cdn_url:
+                        img_tags[0]['src'] = gif_cdn_url
+                        print(f"[COPY UPDATE] 1ª imagem da copy substituída pelo GIF do CDN: {gif_cdn_url}")
+                    elif 1 in mapa_urls_cdn:
+                        img_tags[0]['src'] = mapa_urls_cdn[1]
+                        print(f"[COPY UPDATE] 1ª imagem da copy substituída pela imagem 1 do CDN: {mapa_urls_cdn[1]}")
+                        
+                    # Outras imagens da copy (2ª, 3ª, 4ª...) correspondem sequencialmente à galeria (original_idx = 2, 3, 4...)
+                    for img_pos_copy in range(1, len(img_tags)):
+                        galeria_idx = img_pos_copy + 1
+                        if galeria_idx in mapa_urls_cdn:
+                            img_tags[img_pos_copy]['src'] = mapa_urls_cdn[galeria_idx]
+                            print(f"[COPY UPDATE] Imagem {img_pos_copy+1} da copy substituída por imagem {galeria_idx} do CDN: {mapa_urls_cdn[galeria_idx]}")
+                            
+                    body_html_final = str(soup)
+                    
+                    # Atualiza o produto via chamada PUT REST rápida para salvar a copy otimizada com imagens hospedadas
+                    put_url = f"https://{shop_name}.myshopify.com/admin/api/2026-04/products/{product_id}.json"
+                    put_payload = {
+                        "product": {
+                            "id": product_id,
+                            "handle": handle_cleaned,
+                            "body_html": body_html_final
+                        }
+                    }
+                    
+                    try:
+                        def put_call():
+                            return requests.put(put_url, json=put_payload, headers=headers, timeout=15)
+                        put_res = await loop.run_in_executor(None, put_call)
+                        if put_res.status_code == 200:
+                            print("[PUT UPDATE COPY] Copy atualizada com sucesso no CDN da Shopify!")
+                        else:
+                            print(f"[PUT UPDATE COPY] Erro ao atualizar copy: Código {put_res.status_code} - {put_res.text}")
+                    except Exception as e_put:
+                        print(f"[PUT UPDATE COPY] Falha ao fazer PUT de atualização: {e_put}")
+            
             admin_url = f"https://admin.shopify.com/store/{shop_name}/products/{product_id}"
             return {
                 "success": True,

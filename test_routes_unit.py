@@ -1,12 +1,13 @@
 import asyncio
 from unittest.mock import patch, MagicMock
-from main import exportar_csv, enviar_shopify
+from main import enviar_shopify
 from extractor import ProdutoCompleto
 
 async def test_all():
     # 1. Dados do produto mockado
     product_data = ProdutoCompleto(
         title="Sapato Moderno e Elegante",
+        handle="sapato-moderno",
         seo_description="Sapato social masculino moderno e confortável feito de couro legítimo.",
         price="R$ 299,90",
         features=["Couro legítimo de alta durabilidade", "Palmilha ortopédica macia", "Solado antiderrapante"],
@@ -14,20 +15,7 @@ async def test_all():
         description_html="<h2>Sapato Extraordinário</h2><p>Feito em couro.</p><img src='https://exemplo.com/sapato.gif'>"
     )
 
-    print("==================================================")
-    print("Testando exportar_csv...")
-    response = await exportar_csv(product_data)
-    csv_bytes = response.body
-    csv_text = csv_bytes.decode('utf-8')
-    
-    # Validações do CSV
-    assert "Handle" in csv_text, "Cabeçalho do CSV incorreto"
-    assert "sapato-moderno-e-elegante" in csv_text, "Slugify do Handle falhou"
-    assert "299.90" in csv_text, "Preço não foi limpo corretamente"
-    assert "https://exemplo.com/imagem1.jpg" in csv_text, "Imagem 1 ausente"
-    assert "https://exemplo.com/imagem2.jpg" in csv_text, "Imagem 2 ausente"
-    assert "sapato.gif" in csv_text, "Description HTML (GIF) ausente no CSV"
-    print("[SUCESSO] Teste de exportação CSV passou!")
+
 
     print("==================================================")
     print("Testando enviar_shopify...")
@@ -45,7 +33,11 @@ async def test_all():
             }
         }
         
-        with patch('requests.post', return_value=mock_response) as mock_post:
+        mock_put_response = MagicMock()
+        mock_put_response.status_code = 200
+        
+        with patch('requests.post', return_value=mock_response) as mock_post, \
+             patch('requests.put', return_value=mock_put_response) as mock_put:
             res = await enviar_shopify(product_data)
             
             # Validações do envio para a Shopify
@@ -62,11 +54,20 @@ async def test_all():
             assert "loja-teste.myshopify.com/admin/api/2026-04/products.json" in called_url, "URL de API incorreta"
             assert called_headers["X-Shopify-Access-Token"] == "shpat_token_teste_123", "Token de acesso incorreto"
             assert called_json["product"]["title"] == "Sapato Moderno e Elegante", "Título incorreto no JSON de envio"
+            assert called_json["product"]["handle"] == "sapato-moderno", "Handle incorreto no JSON de envio"
             assert called_json["product"]["status"] == "draft", "Status não é draft"
             assert "sapato.gif" in called_json["product"]["body_html"], "Description HTML (GIF) ausente no envio Shopify"
+            
+            # Verifica se o PUT foi chamado
+            mock_put.assert_called_once()
+            put_url = mock_put.call_args[0][0]
+            put_json = mock_put.call_args[1]['json']
+            assert "loja-teste.myshopify.com/admin/api/2026-04/products/123456789.json" in put_url, "URL de PUT incorreta"
+            assert put_json["product"]["handle"] == "sapato-moderno", "Handle incorreto no PUT"
             
             print("[SUCESSO] Teste de upload Shopify passou!")
     print("==================================================")
 
 if __name__ == "__main__":
     asyncio.run(test_all())
+

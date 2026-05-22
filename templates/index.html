@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Extrator de Produtos Universal</title>
+    <title>EKopy - Dashboard</title>
     <!-- Google Fonts: Inter & Outfit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,15 +13,16 @@
     
     <style>
         :root {
-            --bg-color: #0b0f19;
-            --card-bg: rgba(17, 24, 39, 0.7);
-            --border-color: rgba(255, 255, 255, 0.08);
+            --bg-color: #080b11;
+            --sidebar-bg: #0d111b;
+            --card-bg: rgba(17, 22, 37, 0.65);
+            --border-color: rgba(255, 255, 255, 0.06);
             --accent-primary: #8b5cf6;
             --accent-secondary: #06b6d4;
             --text-main: #f3f4f6;
             --text-secondary: #9ca3af;
-            --glow: 0 0 20px rgba(139, 92, 246, 0.4);
-            --glow-secondary: 0 0 20px rgba(6, 182, 212, 0.4);
+            --glow: 0 0 20px rgba(139, 92, 246, 0.3);
+            --glow-secondary: 0 0 20px rgba(6, 182, 212, 0.3);
             --font-main: 'Inter', sans-serif;
             --font-title: 'Outfit', sans-serif;
         }
@@ -30,56 +31,170 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         body {
             background-color: var(--bg-color);
             background-image: 
-                radial-gradient(at 10% 10%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
-                radial-gradient(at 90% 90%, rgba(6, 182, 212, 0.15) 0px, transparent 50%);
+                radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.1) 0px, transparent 50%);
             background-attachment: fixed;
             color: var(--text-main);
             font-family: var(--font-main);
             min-height: 100vh;
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            padding: 2rem 1rem;
             overflow-x: hidden;
         }
 
-        .container {
-            max-width: 1000px;
-            width: 100%;
+        /* Sidebar Style */
+        .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
-            gap: 2rem;
+            padding: 2rem 1.5rem;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
         }
 
-        /* Header Style */
-        header {
-            text-align: center;
-            margin-bottom: 1rem;
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 3rem;
         }
 
-        header h1 {
+        .logo-area i {
+            font-size: 1.8rem;
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.5));
+        }
+
+        .logo-area h1 {
             font-family: var(--font-title);
-            font-size: 2.8rem;
+            font-size: 1.5rem;
             font-weight: 800;
             background: linear-gradient(135deg, #a78bfa 0%, #22d3ee 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 0.5rem;
-            letter-spacing: -1px;
-            text-shadow: 0 0 40px rgba(139, 92, 246, 0.1);
+            letter-spacing: -0.5px;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            flex: 1;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.8rem 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .nav-item.active {
+            border-left: 3px solid var(--accent-primary);
+            border-radius: 0 10px 10px 0;
+            background: rgba(139, 92, 246, 0.06);
+            color: #c084fc;
+        }
+
+        .nav-item i {
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Shopify Connection Widget */
+        .sidebar-widget {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            font-size: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .widget-title {
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .widget-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+            color: #10b981;
+        }
+
+        .widget-status.error {
+            color: #ef4444;
+        }
+
+        .widget-status span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: currentColor;
+            box-shadow: 0 0 8px currentColor;
+        }
+
+        /* Main Content Style */
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 2.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            max-width: 1400px;
+            width: calc(100% - 280px);
+        }
+
+        header {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        header h2 {
+            font-family: var(--font-title);
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
         }
 
         header p {
             color: var(--text-secondary);
-            font-size: 1.1rem;
             font-weight: 300;
+            font-size: 1rem;
         }
 
         /* Glassmorphism Card Wrapper */
@@ -88,25 +203,19 @@
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--border-color);
-            border-radius: 20px;
-            padding: 2rem;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            border-radius: 16px;
+            padding: 1.75rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
         }
 
-        /* Search / Input Section */
-        .search-section {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
+        /* URL Extraction Box */
         .search-box-wrapper {
             position: relative;
             display: flex;
             align-items: center;
-            border-radius: 14px;
-            background: rgba(10, 15, 30, 0.8);
-            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            background: rgba(8, 11, 17, 0.7);
+            border: 1px solid var(--border-color);
             padding: 0.25rem;
         }
 
@@ -119,7 +228,7 @@
             position: absolute;
             left: 1.25rem;
             color: var(--text-secondary);
-            font-size: 1.2rem;
+            font-size: 1.1rem;
         }
 
         .search-input {
@@ -128,8 +237,8 @@
             border: none;
             outline: none;
             color: var(--text-main);
-            font-size: 1rem;
-            padding: 1rem 1rem 1rem 3rem;
+            font-size: 0.95rem;
+            padding: 0.85rem 1rem 0.85rem 3rem;
             font-family: var(--font-main);
         }
 
@@ -138,43 +247,72 @@
             border: none;
             outline: none;
             color: white;
-            padding: 0.9rem 2rem;
-            border-radius: 11px;
+            padding: 0.8rem 1.75rem;
+            border-radius: 9px;
             font-weight: 600;
-            font-size: 1rem;
+            font-size: 0.95rem;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 0.5rem;
             box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+            transition: all 0.2s ease;
         }
 
         .search-button:hover {
-            transform: translateY(-2px);
+            transform: translateY(-1px);
             box-shadow: var(--glow);
         }
 
-        .search-button:active {
-            transform: translateY(0);
+        /* Search Box Layout Grid */
+        .search-box-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 1rem;
+            align-items: center;
         }
 
-        /* Loading Spinner */
+        @media (max-width: 900px) {
+            .search-box-grid {
+                grid-template-columns: 1fr;
+            }
+            .search-button {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+
+        /* Error/Loading Indicators */
+        .error-box {
+            display: none;
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            padding: 1rem;
+            border-radius: 10px;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
         .loader-wrapper {
             display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             gap: 1rem;
-            padding: 3rem 0;
+            padding: 2.5rem 0;
         }
 
         .spinner {
-            width: 50px;
-            height: 50px;
+            width: 44px;
+            height: 44px;
             border: 3px solid rgba(6, 182, 212, 0.1);
             border-radius: 50%;
             border-top-color: var(--accent-secondary);
-            animation: spin 1s ease-in-out infinite;
+            animation: spin 1s linear infinite;
             box-shadow: var(--glow-secondary);
         }
 
@@ -184,6 +322,7 @@
 
         .loading-text {
             color: var(--text-secondary);
+            font-size: 0.9rem;
             font-weight: 500;
             letter-spacing: 0.5px;
             animation: pulse 1.5s infinite;
@@ -194,312 +333,412 @@
             50% { opacity: 1; }
         }
 
-        /* Error Box */
-        .error-box {
-            display: none;
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #f87171;
-            padding: 1rem;
-            border-radius: 12px;
-            align-items: center;
-            gap: 0.75rem;
-            margin-top: 1rem;
-        }
-        
-        /* Copy Rica Section styling */
-        .copy-rica-content img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 8px;
-            margin: 1.5rem auto;
-            display: block;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-        }
-        .copy-rica-content p, .copy-rica-content h1, .copy-rica-content h2, .copy-rica-content h3, .copy-rica-content h4 {
-            margin-bottom: 1rem;
-            line-height: 1.6;
-            color: #e5e7eb;
-        }
-        .copy-rica-content h1, .copy-rica-content h2, .copy-rica-content h3 {
-            margin-top: 1.5rem;
-            font-weight: 700;
-        }
-        .copy-rica-content {
-            max-height: 600px;
-            overflow-y: auto;
-            scrollbar-width: thin;
-            scrollbar-color: var(--accent-primary) rgba(255, 255, 255, 0.05);
-            padding: 1.5rem;
-            background: rgba(255, 255, 255, 0.01);
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-        }
-
-        /* Results Layout */
-        .results-section {
-            display: none; /* Exibido dinamicamente */
-            grid-template-columns: 1.2fr 0.8fr;
+        /* Editor Layout (Workspace) */
+        .workspace {
+            display: none; /* Visible after extraction */
+            grid-template-columns: 1fr 340px;
             gap: 2rem;
-            animation: fadeIn 0.6s ease;
+            align-items: start;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @media (max-width: 800px) {
-            .results-section {
+        @media (max-width: 1050px) {
+            .workspace {
                 grid-template-columns: 1fr;
             }
         }
 
-        .info-card {
+        /* Tabs and Navigation */
+        .editor-container {
             display: flex;
             flex-direction: column;
             gap: 1.5rem;
         }
 
-        .product-header {
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 1rem;
-        }
-
-        .product-title {
-            font-family: var(--font-title);
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: var(--text-main);
-            line-height: 1.3;
-        }
-
-        .product-price {
-            font-size: 2rem;
-            font-weight: 800;
-            color: var(--accent-secondary);
-            margin-top: 0.5rem;
-            text-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
-        }
-
-        .product-meta {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .meta-title {
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--text-secondary);
-            letter-spacing: 1px;
-            margin-bottom: 0.25rem;
-        }
-
-        .seo-desc {
-            font-size: 0.95rem;
-            line-height: 1.5;
-            color: #d1d5db;
-            background: rgba(255, 255, 255, 0.02);
-            padding: 1rem;
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-        }
-
-        .features-list {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-
-        .features-list li {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            font-size: 0.95rem;
-            color: #e5e7eb;
-        }
-
-        .features-list li i {
-            color: #10b981;
-            margin-top: 0.25rem;
-        }
-
-        /* Images Gallery */
-        .images-card {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .main-image-wrapper {
-            width: 100%;
-            aspect-ratio: 1;
-            border-radius: 16px;
-            overflow: hidden;
-            background: #111827;
-            border: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-
-        .main-image {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-
-        .thumbnails-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 0.5rem;
-        }
-
-        .thumb-wrapper {
-            aspect-ratio: 1;
-            border-radius: 8px;
-            overflow: hidden;
-            background: #111827;
-            border: 2px solid transparent;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .thumb-wrapper.active {
-            border-color: var(--accent-primary);
-        }
-
-        .thumb-wrapper img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-
-        /* Tabs and raw JSON section */
-        .tabs-container {
-            margin-top: 1rem;
-        }
-
-        .tab-buttons {
+        .tabs-header {
             display: flex;
             gap: 0.5rem;
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 0.5rem;
-            margin-bottom: 1rem;
         }
 
-        .tab-btn {
+        .tab-button {
             background: transparent;
             border: none;
             color: var(--text-secondary);
             font-weight: 600;
             font-size: 0.9rem;
-            padding: 0.5rem 1rem;
+            padding: 0.6rem 1.2rem;
             cursor: pointer;
-            border-radius: 6px;
-        }
-
-        .tab-btn.active {
-            color: var(--accent-primary);
-            background: rgba(139, 92, 246, 0.1);
-        }
-
-        .json-viewer {
-            display: none;
-            background: #070a13;
-            color: #38bdf8;
-            font-family: monospace;
-            padding: 1.5rem;
-            border-radius: 12px;
-            overflow-x: auto;
-            border: 1px solid var(--border-color);
-            font-size: 0.9rem;
-            white-space: pre-wrap;
-        }
-
-        /* Shopify Actions Styles */
-        .shopify-actions-group {
+            border-radius: 8px;
+            transition: all 0.2s ease;
             display: flex;
-            gap: 1rem;
-            margin-top: 1.5rem;
-            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .action-btn {
-            padding: 0.8rem 1.5rem;
+        .tab-button:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .tab-button.active {
+            color: var(--accent-primary);
+            background: rgba(139, 92, 246, 0.08);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Form Fields Stylings */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            letter-spacing: 0.75px;
+        }
+
+        .form-control {
+            background: rgba(8, 11, 17, 0.6);
+            border: 1px solid var(--border-color);
             border-radius: 10px;
-            font-size: 0.95rem;
+            color: var(--text-main);
+            padding: 0.8rem 1rem;
+            font-family: var(--font-main);
+            font-size: 0.9rem;
+            outline: none;
+            width: 100%;
+            transition: all 0.2s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.15);
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        /* Dynamic Benefits Manager */
+        .benefits-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .benefit-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .benefit-row .form-control {
+            padding: 0.65rem 0.9rem;
+        }
+
+        .btn-icon-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 0.65rem;
+            border-radius: 9px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .btn-icon-danger:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-action-outline {
+            background: rgba(139, 92, 246, 0.05);
+            border: 1px dashed rgba(139, 92, 246, 0.3);
+            color: #c084fc;
+            padding: 0.7rem 1.2rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
             font-weight: 600;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-action-outline:hover {
+            background: rgba(139, 92, 246, 0.1);
+            border-color: var(--accent-primary);
+            color: white;
+        }
+
+        /* Split-screen HTML Editor */
+        .split-editor {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            min-height: 500px;
+        }
+
+        @media (max-width: 900px) {
+            .split-editor {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .html-code-pane {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .html-textarea {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: #38bdf8;
+            background: #06090e !important;
+            flex: 1;
+            min-height: 450px;
+        }
+
+        .html-preview-pane {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .html-preview-container {
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 10px;
+            padding: 1.5rem;
+            overflow-y: auto;
+            max-height: 520px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .html-preview-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 1rem auto;
+            display: block;
+        }
+
+        /* Images Grid Gallery */
+        .images-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 1rem;
+        }
+
+        .image-card {
+            aspect-ratio: 1;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background: #0c0f17;
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .image-card img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        /* Image selection states */
+        .image-card.selected {
+            border-color: var(--accent-primary);
+        }
+
+        .image-card .checkbox-overlay {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 22px;
+            height: 22px;
+            background: rgba(12, 15, 23, 0.85);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: transparent;
+            font-size: 0.65rem;
+            transition: all 0.15s ease;
+        }
+
+        .image-card.selected .checkbox-overlay {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: white;
+            box-shadow: 0 0 6px var(--accent-primary);
+        }
+
+        .image-card .delete-btn {
+            position: absolute;
+            bottom: -32px;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: rgba(239, 68, 68, 0.95);
+            border: none;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            transition: all 0.2s ease;
+        }
+
+        .image-card:hover .delete-btn {
+            bottom: 0;
+        }
+
+        /* Summary Sticky Panel */
+        .sticky-summary {
+            position: sticky;
+            top: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .summary-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .summary-cover {
+            width: 140px;
+            height: 140px;
+            border-radius: 12px;
+            background: #0c0f17;
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .summary-cover img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .summary-title {
+            font-family: var(--font-title);
+            font-weight: 700;
+            font-size: 1.15rem;
+            color: var(--text-main);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            line-height: 1.3;
+        }
+
+        .summary-price {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--accent-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .btn-upload-shopify {
+            background: linear-gradient(135deg, var(--accent-primary) 0%, #7c3aed 100%);
+            border: none;
+            color: white;
+            width: 100%;
+            padding: 0.9rem;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
             justify-content: center;
             gap: 0.6rem;
-            border: none;
-            outline: none;
-            flex: 1;
-            min-width: 200px;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+            transition: all 0.2s ease;
         }
 
-        .csv-btn {
-            background: rgba(6, 182, 212, 0.1);
-            color: var(--accent-secondary);
-            border: 1px solid rgba(6, 182, 212, 0.3);
-        }
-
-        .csv-btn:hover {
-            background: var(--accent-secondary);
-            color: #0c101b;
-            box-shadow: var(--glow-secondary);
-        }
-
-        .api-btn {
-            background: rgba(139, 92, 246, 0.1);
-            color: var(--accent-primary);
-            border: 1px solid rgba(139, 92, 246, 0.3);
-        }
-
-        .api-btn:hover {
-            background: var(--accent-primary);
-            color: #fff;
+        .btn-upload-shopify:hover:not(:disabled) {
+            transform: translateY(-2px);
             box-shadow: var(--glow);
         }
 
-        .action-btn:disabled {
+        .btn-upload-shopify:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            box-shadow: none !important;
-            background: rgba(255, 255, 255, 0.05) !important;
-            color: var(--text-secondary) !important;
-            border-color: var(--border-color) !important;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            box-shadow: none;
         }
 
+        /* Shopify Upload Status Alerts */
         .shopify-status-box {
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            padding: 0.8rem 1.2rem;
+            padding: 0.8rem 1rem;
             border-radius: 10px;
-            font-size: 0.9rem;
-            margin-top: 1rem;
+            font-size: 0.85rem;
             border: 1px solid transparent;
+            line-height: 1.4;
         }
 
         .status-info {
-            background: rgba(59, 130, 246, 0.1);
-            border-color: rgba(59, 130, 246, 0.2);
+            background: rgba(59, 130, 246, 0.08);
+            border-color: rgba(59, 130, 246, 0.15);
             color: #60a5fa;
         }
 
         .status-success {
-            background: rgba(16, 185, 129, 0.1);
-            border-color: rgba(16, 185, 129, 0.2);
+            background: rgba(16, 185, 129, 0.08);
+            border-color: rgba(16, 185, 129, 0.15);
             color: #34d399;
         }
 
@@ -510,174 +749,263 @@
         }
 
         .status-error {
-            background: rgba(239, 68, 68, 0.1);
-            border-color: rgba(239, 68, 68, 0.2);
+            background: rgba(239, 68, 68, 0.08);
+            border-color: rgba(239, 68, 68, 0.15);
             color: #f87171;
         }
 
-        footer {
-            text-align: center;
-            margin-top: auto;
-            padding-top: 3rem;
-            color: var(--text-secondary);
-            font-size: 0.85rem;
+        /* Scrollbars customization */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
         }
-
-        footer a {
-            color: var(--accent-secondary);
-            text-decoration: none;
+        ::-webkit-scrollbar-track {
+            background: #080b11;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.12);
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
+    <!-- Left Sidebar -->
+    <aside class="sidebar">
+        <div class="logo-area">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <h1>EKopy</h1>
+        </div>
+        
+        <nav class="nav-menu">
+            <a href="#" class="nav-item active">
+                <i class="fa-solid fa-link"></i>
+                <span>Importar Único</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i class="fa-solid fa-gear"></i>
+                <span>Configurações</span>
+            </a>
+        </nav>
+
+        <!-- Shopify Keys Status -->
+        <div class="sidebar-widget">
+            <div class="widget-title">
+                <span>Shopify Status</span>
+                <i class="fa-brands fa-shopify"></i>
+            </div>
+            <div class="widget-status" id="shopify-status-widget">
+                <span></span>
+                <small id="shopify-status-text">Conectado</small>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Panel -->
+    <main class="main-content">
         <header>
-            <h1><i class="fa-solid fa-wand-magic-sparkles" style="margin-right: 10px; color: var(--accent-primary);"></i>Extrator de Produtos Universal</h1>
-            <p>Insira a URL de qualquer produto para extrair detalhes, preço, imagens e otimização de SEO de forma instantânea.</p>
+            <h2>Importar um Produto Único</h2>
+            <p>Copie a URL de qualquer loja virtual para carregar os metadados, copy de vendas e imagens do produto de forma interativa.</p>
         </header>
 
-        <!-- Search input Card -->
+        <!-- Search Input Box -->
         <div class="glass-card">
-            <div class="search-section">
-                <form id="extract-form">
+            <form id="extract-form">
+                <div class="search-box-grid">
                     <div class="search-box-wrapper">
                         <i class="fa-solid fa-link"></i>
                         <input 
                             type="url" 
                             id="product-url" 
                             class="search-input" 
-                            placeholder="https://exemplo-ecommerce.com.br/produto-legal" 
+                            placeholder="Cole a URL do produto aqui..." 
                             required
                         >
-                        <button type="submit" class="search-button" id="submit-btn">
-                            <span>Extrair</span>
-                            <i class="fa-solid fa-arrow-right"></i>
-                        </button>
                     </div>
-                </form>
-                
-                <!-- Error display -->
-                <div class="error-box" id="error-box">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                    <span id="error-msg">Erro ao carregar dados. Tente novamente.</span>
+                    <div class="search-box-wrapper">
+                        <i class="fa-solid fa-circle-play"></i>
+                        <input 
+                            type="url" 
+                            id="creative-video-url" 
+                            class="search-input" 
+                            placeholder="URL de Vídeo do Criativo (Opcional)..."
+                        >
+                    </div>
+                    <button type="submit" class="search-button" id="submit-btn">
+                        <span>Importar</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
                 </div>
-            </div>
+            </form>
+
             
-            <!-- Loading Indicator -->
+            <div class="error-box" id="error-box">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span id="error-msg">Erro ao carregar dados. Tente novamente.</span>
+            </div>
+
+            <!-- Loader -->
             <div class="loader-wrapper" id="loader">
                 <div class="spinner"></div>
-                <div class="loading-text">Navegando e extraindo dados com Playwright & Gemini...</div>
+                <div class="loading-text">Raspando e sintetizando os dados com Playwright e Gemini...</div>
             </div>
         </div>
 
-        <!-- Extraction Results Card -->
-        <div class="glass-card results-section" id="results-card">
-            <!-- Left Info Column -->
-            <div class="info-card">
-                <div class="product-header">
-                    <div class="product-title" id="res-title">Nome do Produto Extraído</div>
-                    <div class="product-price" id="res-price">R$ 0,00</div>
-                </div>
-
-                <div class="product-meta">
-                    <div>
-                        <div class="meta-title">Descrição Otimizada para SEO</div>
-                        <div class="seo-desc" id="res-seo-desc">Descrição otimizada retornada pelo Gemini...</div>
+        <!-- Product Editor Workspace (Hidden until extracted) -->
+        <section class="workspace" id="product-workspace">
+            <div class="editor-container">
+                <div class="glass-card">
+                    <!-- Tab buttons -->
+                    <div class="tabs-header">
+                        <button class="tab-button active" data-tab="tab-geral">
+                            <i class="fa-solid fa-pen-to-square"></i> Geral
+                        </button>
+                        <button class="tab-button" data-tab="tab-copy">
+                            <i class="fa-solid fa-code"></i> Copy HTML
+                        </button>
+                        <button class="tab-button" data-tab="tab-features">
+                            <i class="fa-solid fa-circle-check"></i> Benefícios
+                        </button>
+                        <button class="tab-button" data-tab="tab-images">
+                            <i class="fa-solid fa-images"></i> Imagens
+                        </button>
                     </div>
 
-                    <div>
-                        <div class="meta-title">Benefícios Principais</div>
-                        <ul class="features-list" id="res-features">
-                            <!-- Benefícios carregados dinamicamente -->
-                        </ul>
+                    <!-- Geral tab -->
+                    <div class="tab-content active" id="tab-geral" style="margin-top: 1.5rem;">
+                        <div class="form-group">
+                            <label for="edit-title">Título do Produto</label>
+                            <input type="text" id="edit-title" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-handle">Identificador de URL (Handle)</label>
+                            <input type="text" id="edit-handle" class="form-control" placeholder="ex: proyector-mini">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-price">Preço</label>
+                            <input type="text" id="edit-price" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-seo-desc">Descrição SEO</label>
+                            <textarea id="edit-seo-desc" class="form-control"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Copy HTML split editor tab -->
+                    <div class="tab-content" id="tab-copy" style="margin-top: 1.5rem;">
+                        <div class="split-editor">
+                            <!-- Left HTML Area -->
+                            <div class="html-code-pane">
+                                <div class="form-group" style="height: 100%; margin-bottom: 0;">
+                                    <label>Código HTML da Descrição</label>
+                                    <textarea id="edit-copy-html" class="form-control html-textarea"></textarea>
+                                </div>
+                            </div>
+                            <!-- Right Live Render Preview -->
+                            <div class="html-preview-pane">
+                                <label style="text-transform: uppercase; font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.75px; margin-bottom: 0.5rem;">Visualização em Tempo Real</label>
+                                <div class="html-preview-container" id="copy-html-preview">
+                                    <!-- Dynamic visual preview -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Features/Benefits tab -->
+                    <div class="tab-content" id="tab-features" style="margin-top: 1.5rem;">
+                        <div class="form-group">
+                            <label>Principais Benefícios do Produto</label>
+                            <div class="benefits-list" id="edit-benefits-container">
+                                <!-- Dynamic benefits list inputs -->
+                            </div>
+                            <button type="button" class="btn-action-outline" id="add-benefit-btn">
+                                <i class="fa-solid fa-plus"></i> Adicionar Benefício
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Images tab -->
+                    <div class="tab-content" id="tab-images" style="margin-top: 1.5rem;">
+                        <div class="form-group">
+                            <label style="margin-bottom: 0.75rem; display: block;">Selecione as imagens para enviar (Clique para selecionar/deselecionar)</label>
+                            <div class="images-grid" id="edit-images-grid">
+                                <!-- Dynamic images grid -->
+                            </div>
+                        </div>
                     </div>
                 </div>
-
-                <!-- Ações Shopify -->
-                <div class="shopify-actions-group">
-                    <button type="button" class="action-btn csv-btn" id="export-csv-btn">
-                        <i class="fa-solid fa-file-csv"></i>
-                        <span>Exportar CSV Shopify</span>
-                    </button>
-                    <button type="button" class="action-btn api-btn" id="upload-api-btn">
-                        <i class="fa-solid fa-cloud-arrow-up"></i>
-                        <span>Enviar Direto p/ Shopify</span>
-                    </button>
-                </div>
-
-                <div class="shopify-status-box" id="shopify-status-box" style="display: none;">
-                    <i class="fa-solid fa-circle-info" id="status-icon"></i>
-                    <span id="shopify-status-msg">Enviando para Shopify...</span>
-                </div>
             </div>
 
-            <!-- Right Image Column -->
-            <div class="images-card">
-                <div class="meta-title">Imagens Identificadas</div>
-                <div class="main-image-wrapper">
-                    <img src="" alt="Produto" class="main-image" id="res-main-img">
-                </div>
-                <div class="thumbnails-grid" id="res-thumbnails">
-                    <!-- Miniaturas carregadas dinamicamente -->
+            <!-- Sticky Summary Sidebar Panel -->
+            <div class="sticky-summary">
+                <div class="glass-card">
+                    <div class="summary-header">
+                        <div class="summary-cover" id="summary-cover-box">
+                            <img src="" alt="Imagem do Produto" id="summary-cover-img">
+                        </div>
+                        <div class="summary-title" id="summary-title-text">Título do Produto</div>
+                        <div class="summary-price" id="summary-price-text">R$ 0,00</div>
+                    </div>
+                    
+                    <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                        <button type="button" class="btn-upload-shopify" id="upload-api-btn">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <span>Enviar p/ Shopify</span>
+                        </button>
+                        
+                        <div class="shopify-status-box" id="shopify-status-box" style="display: none;">
+                            <i class="fa-solid fa-circle-info" id="status-icon"></i>
+                            <span id="shopify-status-msg">Iniciando envio...</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <!-- Full Width Copy Rica Column -->
-            <div class="copy-rica-section" style="grid-column: 1 / -1; margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 2rem;">
-                <div class="meta-title" style="font-size: 1.1rem; margin-bottom: 1rem;"><i class="fa-solid fa-file-invoice" style="margin-right: 8px; color: var(--accent-primary);"></i>Copy Rica do Produto (Texto, Imagens e GIFs)</div>
-                <div class="copy-rica-content" id="res-copy-rica">
-                    <!-- Copy HTML renderizada aqui -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Raw JSON Viewer Tabbed Section -->
-        <div class="glass-card tabs-container" id="json-card" style="display: none;">
-            <div class="tab-buttons">
-                <button class="tab-btn active" id="tab-visual-btn">Visualização Completa</button>
-                <button class="tab-btn" id="tab-json-btn">JSON Bruto</button>
-            </div>
-            <pre class="json-viewer" id="res-json">{}</pre>
-        </div>
-    </div>
-
-    <!-- Footer -->
-    <footer>
-        Desenvolvido com <i class="fa-solid fa-heart" style="color: #ef4444;"></i> usando FastAPI, Playwright e Google Gemini API.
-    </footer>
+        </section>
+    </main>
 
     <script>
         const form = document.getElementById('extract-form');
         const urlInput = document.getElementById('product-url');
+        const creativeVideoUrlInput = document.getElementById('creative-video-url');
         const submitBtn = document.getElementById('submit-btn');
         const loader = document.getElementById('loader');
         const errorBox = document.getElementById('error-box');
         const errorMsg = document.getElementById('error-msg');
         
-        const resultsCard = document.getElementById('results-card');
-        const jsonCard = document.getElementById('json-card');
+        const workspace = document.getElementById('product-workspace');
         
-        // Result fields
-        const resTitle = document.getElementById('res-title');
-        const resPrice = document.getElementById('res-price');
-        const resSeoDesc = document.getElementById('res-seo-desc');
-        const resFeatures = document.getElementById('res-features');
-        const resMainImg = document.getElementById('res-main-img');
-        const resThumbnails = document.getElementById('res-thumbnails');
-        const resJson = document.getElementById('res-json');
-        const resCopyRica = document.getElementById('res-copy-rica');
+        // Form controls for editing
+        const editTitle = document.getElementById('edit-title');
+        const editHandle = document.getElementById('edit-handle');
+        const editPrice = document.getElementById('edit-price');
+        const editSeoDesc = document.getElementById('edit-seo-desc');
+        const editCopyHtml = document.getElementById('edit-copy-html');
+        const copyHtmlPreview = document.getElementById('copy-html-preview');
+        const editBenefitsContainer = document.getElementById('edit-benefits-container');
+        const addBenefitBtn = document.getElementById('add-benefit-btn');
+        const editImagesGrid = document.getElementById('edit-images-grid');
 
-        // Shopify fields
-        const exportCsvBtn = document.getElementById('export-csv-btn');
+        // Sticky Summary elements
+        const summaryCoverImg = document.getElementById('summary-cover-img');
+        const summaryTitleText = document.getElementById('summary-title-text');
+        const summaryPriceText = document.getElementById('summary-price-text');
+
+        // Upload control
         const uploadApiBtn = document.getElementById('upload-api-btn');
         const shopifyStatusBox = document.getElementById('shopify-status-box');
         const shopifyStatusMsg = document.getElementById('shopify-status-msg');
         const statusIcon = document.getElementById('status-icon');
 
-        let currentProductData = null; // Guarda os dados do produto ativo
+        // Sidebar Widget status
+        const shopifyStatusWidget = document.getElementById('shopify-status-widget');
+        const shopifyStatusText = document.getElementById('shopify-status-text');
 
-        // Configuração de URL base dinâmica para suportar requisições mesmo rodando o HTML localmente (file://)
+        let currentProductData = null; // Active product memory
+        let selectedImagesUrls = []; // Track selected images
+
+        // Dynamic base URL resolver
         const getBaseUrl = () => {
             const origin = window.location.origin;
             if (origin.startsWith('file:') || origin === 'null' || !origin.includes(':8000')) {
@@ -687,115 +1015,252 @@
         };
         const BASE_URL = getBaseUrl();
 
-        // Tab fields
-        const tabVisualBtn = document.getElementById('tab-visual-btn');
-        const tabJsonBtn = document.getElementById('tab-json-btn');
-
-        tabVisualBtn.addEventListener('click', () => {
-            tabVisualBtn.classList.add('active');
-            tabJsonBtn.classList.remove('active');
-            resJson.classList.remove('active');
-            resultsCard.style.display = 'grid';
+        // 1. Tab switching system
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Deactivate all
+                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Activate clicked
+                btn.classList.add('active');
+                const tabId = btn.dataset.tab;
+                document.getElementById(tabId).classList.add('active');
+            });
         });
 
-        tabJsonBtn.addEventListener('click', () => {
-            tabJsonBtn.classList.add('active');
-            tabVisualBtn.classList.remove('active');
-            resJson.classList.add('active');
-            resultsCard.style.display = 'none';
+        // 2. Real-time HTML Preview sync
+        editCopyHtml.addEventListener('input', () => {
+            copyHtmlPreview.innerHTML = editCopyHtml.value;
         });
 
+        // 3. Live Header previews
+        editTitle.addEventListener('input', () => {
+            summaryTitleText.textContent = editTitle.value || 'Sem título';
+        });
+
+        editPrice.addEventListener('input', () => {
+            summaryPriceText.textContent = editPrice.value || 'R$ 0,00';
+        });
+
+        // 4. Dynamic benefits renderer helpers
+        const createBenefitRow = (value = '') => {
+            const row = document.createElement('div');
+            row.className = 'benefit-row';
+            row.innerHTML = `
+                <input type="text" class="form-control benefit-input" value="${value}" placeholder="Digite um benefício do produto...">
+                <button type="button" class="btn-icon-danger btn-delete-benefit" title="Excluir benefício">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            `;
+            
+            row.querySelector('.btn-delete-benefit').addEventListener('click', () => {
+                row.remove();
+            });
+
+            return row;
+        };
+
+        addBenefitBtn.addEventListener('click', () => {
+            editBenefitsContainer.appendChild(createBenefitRow());
+        });
+
+        // 5. Image gallery manager
+        const renderImagesGrid = (imagesList) => {
+            editImagesGrid.innerHTML = '';
+            
+            // Cria o botão card para upload local
+            const uploadCard = document.createElement('div');
+            uploadCard.className = 'image-card upload-trigger';
+            uploadCard.style.border = '1px dashed var(--accent-primary)';
+            uploadCard.style.background = 'rgba(139, 92, 246, 0.03)';
+            uploadCard.style.display = 'flex';
+            uploadCard.style.flexDirection = 'column';
+            uploadCard.style.gap = '5px';
+            uploadCard.style.justifyContent = 'center';
+            uploadCard.style.alignItems = 'center';
+            uploadCard.style.minHeight = '130px';
+            uploadCard.innerHTML = `
+                <i class="fa-solid fa-plus" style="font-size: 1.5rem; color: #c084fc;"></i>
+                <span style="font-size: 0.75rem; color: var(--text-secondary); text-align: center; padding: 0 5px; font-weight: 500;">Subir Imagem/GIF</span>
+                <input type="file" id="local-file-input" accept="image/*,image/gif" style="display: none;">
+            `;
+            
+            uploadCard.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'INPUT') {
+                    uploadCard.querySelector('input').click();
+                }
+            });
+            
+            uploadCard.querySelector('input').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const base64Url = event.target.result;
+                        adicionarImagemLocalGrid(base64Url);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            editImagesGrid.appendChild(uploadCard);
+            
+            selectedImagesUrls = [...imagesList]; // Select all by default
+            
+            if (!imagesList || imagesList.length === 0) {
+                summaryCoverImg.src = '';
+                return;
+            }
+
+            // Set cover image
+            summaryCoverImg.src = imagesList[0];
+
+            imagesList.forEach((url, index) => {
+                criarCardImagemGrid(url, index);
+            });
+        };
+
+        const criarCardImagemGrid = (url, index) => {
+            const card = document.createElement('div');
+            card.className = 'image-card selected';
+            card.dataset.url = url;
+            card.innerHTML = `
+                <img src="${url}" alt="Imagem ${index}">
+                <div class="checkbox-overlay"><i class="fa-solid fa-check"></i></div>
+                <button type="button" class="delete-btn"><i class="fa-solid fa-trash"></i> Excluir</button>
+            `;
+
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.delete-btn')) {
+                    card.remove();
+                    updateSelectedImages();
+                    return;
+                }
+
+                card.classList.toggle('selected');
+                updateSelectedImages();
+            });
+
+            editImagesGrid.appendChild(card);
+        };
+
+        const adicionarImagemLocalGrid = (base64Url) => {
+            const index = document.querySelectorAll('.image-card:not(.upload-trigger)').length;
+            const card = document.createElement('div');
+            card.className = 'image-card selected';
+            card.dataset.url = base64Url;
+            card.innerHTML = `
+                <img src="${base64Url}" alt="Imagem Local ${index}">
+                <div class="checkbox-overlay"><i class="fa-solid fa-check"></i></div>
+                <button type="button" class="delete-btn"><i class="fa-solid fa-trash"></i> Excluir</button>
+            `;
+
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.delete-btn')) {
+                    card.remove();
+                    updateSelectedImages();
+                    return;
+                }
+
+                card.classList.toggle('selected');
+                updateSelectedImages();
+            });
+
+            // Insere logo após o card de upload
+            const uploadCard = editImagesGrid.firstElementChild;
+            if (uploadCard) {
+                uploadCard.after(card);
+            } else {
+                editImagesGrid.appendChild(card);
+            }
+            
+            updateSelectedImages();
+        };
+
+        const updateSelectedImages = () => {
+            selectedImagesUrls = [];
+            const selectedCards = document.querySelectorAll('.image-card.selected');
+            selectedCards.forEach(c => {
+                selectedImagesUrls.push(c.dataset.url);
+            });
+
+            // Update cover image summary with the first selected image
+            if (selectedImagesUrls.length > 0) {
+                summaryCoverImg.src = selectedImagesUrls[0];
+            } else {
+                summaryCoverImg.src = '';
+            }
+        };
+
+        // 6. Extraction URL process
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
             const url = urlInput.value.trim();
             if (!url) return;
 
-            // Reset UI
+            // Reset UI states
             errorBox.style.display = 'none';
-            resultsCard.style.display = 'none';
-            jsonCard.style.display = 'none';
+            workspace.style.display = 'none';
             loader.style.display = 'flex';
             submitBtn.disabled = true;
             
-            // Oculta e reseta a caixa de status do Shopify
             shopifyStatusBox.style.display = 'none';
             shopifyStatusBox.className = 'shopify-status-box';
             shopifyStatusMsg.textContent = '';
 
             try {
-                const response = await fetch(`${BASE_URL}/extrair`, {
+                const res = await fetch(`${BASE_URL}/extrair`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ url: url })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        url: url,
+                        creative_video_url: creativeVideoUrlInput.value.trim() || null
+                    })
                 });
 
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.detail || 'Erro interno no servidor ao processar a requisição.');
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.detail || 'Falha ao processar a extração.');
                 }
 
-                const prod = data.produto;
-                currentProductData = prod; // Armazena o produto atualizado
+                currentProductData = data.produto;
 
-                // Populate fields
-                resTitle.textContent = prod.title;
-                resPrice.textContent = prod.price;
-                resSeoDesc.textContent = prod.seo_description;
-                resCopyRica.innerHTML = prod.description_html || '<p style="color: var(--text-secondary);">Nenhuma copy rica adicional encontrada.</p>';
+                // Load basic inputs
+                editTitle.value = currentProductData.title || '';
+                editHandle.value = currentProductData.handle || '';
+                editPrice.value = currentProductData.price || '';
+                editSeoDesc.value = currentProductData.seo_description || '';
+                
+                // Copy HTML Editor
+                editCopyHtml.value = currentProductData.description_html || '';
+                copyHtmlPreview.innerHTML = currentProductData.description_html || '<p style="color: var(--text-secondary);">Nenhuma copy rica adicional.</p>';
 
-                // Load features list
-                resFeatures.innerHTML = '';
-                if (prod.features && prod.features.length > 0) {
-                    prod.features.forEach(feature => {
-                        const li = document.createElement('li');
-                        li.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${feature}</span>`;
-                        resFeatures.appendChild(li);
+                // Render Benefits
+                editBenefitsContainer.innerHTML = '';
+                if (currentProductData.features && currentProductData.features.length > 0) {
+                    currentProductData.features.forEach(feat => {
+                        editBenefitsContainer.appendChild(createBenefitRow(feat));
                     });
                 } else {
-                    resFeatures.innerHTML = '<li>Nenhum benefício retornado</li>';
+                    editBenefitsContainer.appendChild(createBenefitRow());
                 }
 
-                // Load Images
-                resThumbnails.innerHTML = '';
-                if (prod.images && prod.images.length > 0) {
-                    resMainImg.src = prod.images[0];
-                    resMainImg.style.display = 'block';
+                // Render Images
+                renderImagesGrid(currentProductData.images || []);
 
-                    prod.images.forEach((imgUrl, idx) => {
-                        const thumbWrapper = document.createElement('div');
-                        thumbWrapper.className = `thumb-wrapper ${idx === 0 ? 'active' : ''}`;
-                        thumbWrapper.innerHTML = `<img src="${imgUrl}" alt="Thumbnail ${idx}">`;
-                        
-                        thumbWrapper.addEventListener('click', () => {
-                            // Update active thumbnail
-                            document.querySelectorAll('.thumb-wrapper').forEach(w => w.classList.remove('active'));
-                            thumbWrapper.classList.add('active');
-                            // Update main image
-                            resMainImg.src = imgUrl;
-                        });
+                // Load Sticky Side Previews
+                summaryTitleText.textContent = currentProductData.title || 'Sem título';
+                summaryPriceText.textContent = currentProductData.price || 'R$ 0,00';
 
-                        resThumbnails.appendChild(thumbWrapper);
-                    });
-                } else {
-                    resMainImg.style.display = 'none';
-                    resThumbnails.innerHTML = '<span style="color: var(--text-secondary); font-size: 0.9rem;">Nenhuma imagem de alta qualidade encontrada.</span>';
-                }
-
-                // Load Raw JSON
-                resJson.textContent = JSON.stringify(data, null, 4);
-
-                // Show Results Card
-                resultsCard.style.display = 'grid';
-                jsonCard.style.display = 'block';
-                tabVisualBtn.click(); // Default to visual view
+                // Display Workspace
+                workspace.style.display = 'grid';
+                // Activate General tab by default
+                document.querySelector('.tab-button[data-tab="tab-geral"]').click();
 
             } catch (err) {
                 console.error(err);
-                errorMsg.textContent = err.message || 'Erro inesperado ao realizar raspagem.';
+                errorMsg.textContent = err.message || 'Ocorreu um erro ao extrair o produto.';
                 errorBox.style.display = 'flex';
             } finally {
                 loader.style.display = 'none';
@@ -803,116 +1268,77 @@
             }
         });
 
-        // Evento para exportar como CSV compatível com Shopify
-        exportCsvBtn.addEventListener('click', async () => {
-            if (!currentProductData) return;
-
-            try {
-                // Desativa os botões para evitar cliques múltiplos
-                exportCsvBtn.disabled = true;
-                uploadApiBtn.disabled = true;
-
-                // Exibe status informativo
-                shopifyStatusBox.style.display = 'flex';
-                shopifyStatusBox.className = 'shopify-status-box status-info';
-                shopifyStatusMsg.textContent = 'Gerando arquivo CSV...';
-                statusIcon.className = 'fa-solid fa-circle-info';
-
-                const response = await fetch(`${BASE_URL}/exportar-csv`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(currentProductData)
-                });
-
-                if (!response.ok) {
-                    const errData = await response.json();
-                    throw new Error(errData.detail || 'Erro ao gerar o CSV.');
-                }
-
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                
-                // Pega o nome do arquivo do header Content-Disposition ou usa um padrão
-                let filename = `produto_${currentProductData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.csv`;
-                const disposition = response.headers.get('Content-Disposition');
-                if (disposition && disposition.indexOf('attachment') !== -1) {
-                    const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-                    const matches = filenameRegex.exec(disposition);
-                    if (matches != null && matches[1]) { 
-                        filename = matches[1].replace(/['"]/g, '');
-                    }
-                }
-
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(url);
-
-                // Mostra sucesso
-                shopifyStatusBox.className = 'shopify-status-box status-success';
-                shopifyStatusMsg.textContent = 'CSV exportado com sucesso!';
-                statusIcon.className = 'fa-solid fa-circle-check';
-            } catch (err) {
-                console.error(err);
-                shopifyStatusBox.className = 'shopify-status-box status-error';
-                shopifyStatusMsg.textContent = err.message || 'Erro ao exportar CSV.';
-                statusIcon.className = 'fa-solid fa-circle-xmark';
-            } finally {
-                exportCsvBtn.disabled = false;
-                uploadApiBtn.disabled = false;
-            }
-        });
-
-        // Evento para enviar o produto diretamente à Shopify Admin API
+        // 7. Shopify submit API process
         uploadApiBtn.addEventListener('click', async () => {
             if (!currentProductData) return;
 
             try {
-                // Desativa os botões para evitar cliques múltiplos
-                exportCsvBtn.disabled = true;
                 uploadApiBtn.disabled = true;
 
-                // Exibe status informativo de envio
+                // Show status alert
                 shopifyStatusBox.style.display = 'flex';
                 shopifyStatusBox.className = 'shopify-status-box status-info';
-                shopifyStatusMsg.textContent = 'Enviando produto para a Shopify...';
+                shopifyStatusMsg.textContent = 'Enviando produto editado para a Shopify...';
                 statusIcon.className = 'fa-solid fa-circle-info';
+
+                // Read actual edited fields from the UI inputs
+                const finalTitle = editTitle.value.trim();
+                const finalHandle = editHandle.value.trim();
+                const finalPrice = editPrice.value.trim();
+                const finalSeoDesc = editSeoDesc.value.trim();
+                const finalCopyHtml = editCopyHtml.value.trim();
+                
+                const finalFeatures = [];
+                document.querySelectorAll('.benefit-input').forEach(input => {
+                    const val = input.value.trim();
+                    if (val) finalFeatures.push(val);
+                });
+
+                // Compile dynamic product dataset
+                const compiledProduct = {
+                    title: finalTitle,
+                    handle: finalHandle,
+                    seo_description: finalSeoDesc,
+                    price: finalPrice,
+                    features: finalFeatures,
+                    images: selectedImagesUrls,
+                    description_html: finalCopyHtml
+                };
 
                 const response = await fetch(`${BASE_URL}/enviar-shopify`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(currentProductData)
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(compiledProduct)
                 });
 
                 const data = await response.json();
-
                 if (!response.ok) {
-                    throw new Error(data.detail || 'Erro ao enviar para a Shopify. Verifique suas credenciais.');
+                    throw new Error(data.detail || 'Erro ao enviar o produto para a Shopify.');
                 }
 
-                // Sucesso
+                // Successful result
                 shopifyStatusBox.className = 'shopify-status-box status-success';
                 statusIcon.className = 'fa-solid fa-circle-check';
-                
-                // Cria o link para visualizar o produto na Shopify
                 shopifyStatusMsg.innerHTML = `${data.message} <a href="${data.admin_url}" target="_blank" rel="noopener noreferrer">Ver produto no Shopify <i class="fa-solid fa-up-right-from-square" style="font-size: 0.8rem; margin-left: 2px;"></i></a>`;
+
             } catch (err) {
                 console.error(err);
                 shopifyStatusBox.className = 'shopify-status-box status-error';
-                shopifyStatusMsg.textContent = err.message || 'Erro ao enviar produto para a Shopify.';
+                shopifyStatusMsg.textContent = err.message || 'Erro ao enviar o produto para a Shopify.';
                 statusIcon.className = 'fa-solid fa-circle-xmark';
             } finally {
-                exportCsvBtn.disabled = false;
                 uploadApiBtn.disabled = false;
             }
         });
+
+        // Initialize status config check from local env variables
+        const checkShopifyConfigWidget = () => {
+            // Simple mockup validation since keys are read securely on the backend .env
+            // We assume backend connectivity. In production, this can call a status endpoint.
+            shopifyStatusWidget.className = 'widget-status';
+            shopifyStatusText.textContent = 'Conectado';
+        };
+        checkShopifyConfigWidget();
     </script>
 </body>
 </html>

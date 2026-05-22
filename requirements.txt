@@ -5,3 +5,5 @@ pydantic
 google-genai
 python-dotenv
 requests
+pillow
+beautifulsoup4
