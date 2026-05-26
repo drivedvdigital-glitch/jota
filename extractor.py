@@ -13,6 +13,7 @@ import base64
 import requests
 import numpy as np
 from PIL import Image
+from bs4 import BeautifulSoup
 from typing import List, Dict, Any
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
@@ -176,6 +177,42 @@ async def scrape_page_content(url: str) -> Dict[str, Any]:
                             el.removeAttribute(name);
                         }
                     });
+                    
+                    // Remove percentage-based padding-bottom from style attribute
+                    if (el.hasAttribute('style')) {
+                        let style = el.getAttribute('style');
+                        style = style.replace(/padding-bottom\\s*:\\s*\\d+(\\.\\d+)?%\\s*;?/gi, '');
+                        if (style.trim() === '') {
+                            el.removeAttribute('style');
+                        } else {
+                            el.setAttribute('style', style);
+                        }
+                    }
+                    
+                    // Reset media wrappers that use aspect-ratio padding-bottom hacks
+                    let isMediaWrapper = false;
+                    el.classList.forEach(c => {
+                        const cLower = c.toLowerCase();
+                        if (cLower.includes('media') || cLower.includes('image-wrapper') || cLower.includes('image-container')) {
+                            isMediaWrapper = true;
+                        }
+                    });
+
+                    if (isMediaWrapper) {
+                        el.style.setProperty('padding-bottom', '0', 'important');
+                        el.style.setProperty('height', 'auto', 'important');
+                        el.style.setProperty('position', 'relative', 'important');
+                        
+                        // Force children img, video, iframe to position normally
+                        el.querySelectorAll('img, video, iframe').forEach(child => {
+                            child.style.setProperty('position', 'relative', 'important');
+                            child.style.setProperty('top', '0', 'important');
+                            child.style.setProperty('left', '0', 'important');
+                            child.style.setProperty('width', '100%', 'important');
+                            child.style.setProperty('height', 'auto', 'important');
+                            child.style.setProperty('object-fit', 'contain', 'important');
+                        });
+                    }
                     
                     // 5. Limpeza especial de imagens (mantém apenas src, alt, width, height, style, class)
                     if (el.tagName.toLowerCase() === 'img') {
@@ -436,8 +473,189 @@ def convert_mp4_to_animated_webp(video_path: str, output_path: str, max_duration
     except Exception as e:
         print(f"[convert_mp4_to_animated_webp] Exceção durante a conversão: {e}")
         return False
+class BoundingBox(BaseModel):
+    box_2d: list[int] = Field(description="Bounding box coordinates [ymin, xmin, ymax, xmax] normalized to 0-1000.")
+    label: str = Field(description="What was found: 'logo', 'watermark', 'brand_name', 'competitor_url'")
 
-async def extract_product_data(url: str, creative_video_url: str = None, target_language: str = "Espanhol da Colômbia") -> Dict[str, Any]:
+class WatermarkDetection(BaseModel):
+    detected_items: list[BoundingBox] = Field(description="List of detected branding, watermarks, or logos to remove.")
+
+def should_clean_image(url: str) -> bool:
+    # Retorna False para imagens de pagamento, envio, logotipos padrão e outros badges
+    url_lower = url.lower()
+    ignore_keywords = [
+        "logo", "icon", "avatar", "flag", "badge", "payment", "pago", "shipping", 
+        "envio", "transportadoras", "garantia", "secure", "trust", "review", 
+        "banner", "header", "footer", "star", "checkout", "gif"
+    ]
+    for kw in ignore_keywords:
+        if kw in url_lower:
+            return False
+    return True
+
+GEMINI_SEMAPHORE = None
+
+async def remove_watermark_from_image(image_url_or_base64: str) -> str:
+    """
+    Downloads/loads the image, calls Gemini to detect watermarks/logos,
+    applies OpenCV inpainting, and returns the cleaned image as a base64 data URL.
+    If it fails or is a GIF, returns the original image.
+    """
+    image_bytes = None
+    mime_type = "image/jpeg"
+    try:
+        if image_url_or_base64.startswith("data:image/"):
+            header, encoded = image_url_or_base64.split(",", 1)
+            image_bytes = base64.b64decode(encoded)
+            if "image/png" in header:
+                mime_type = "image/png"
+            elif "image/gif" in header:
+                mime_type = "image/gif"
+            elif "image/webp" in header:
+                mime_type = "image/webp"
+        else:
+            # It's a URL
+            loop = asyncio.get_event_loop()
+            def download():
+                return requests.get(image_url_or_base64, timeout=15)
+            res = await loop.run_in_executor(None, download)
+            if res.status_code == 200:
+                image_bytes = res.content
+                url_clean = image_url_or_base64.lower().split('?')[0]
+                if url_clean.endswith('.png'):
+                    mime_type = "image/png"
+                elif url_clean.endswith('.gif'):
+                    mime_type = "image/gif"
+                elif url_clean.endswith('.webp'):
+                    mime_type = "image/webp"
+            else:
+                return image_url_or_base64
+    except Exception as e:
+        print(f"[Watermark Removal] Error loading image: {e}")
+        return image_url_or_base64
+
+    if not image_bytes:
+        return image_url_or_base64
+
+    if mime_type == "image/gif":
+        return image_url_or_base64
+
+    global GEMINI_API_KEY
+    if not GEMINI_API_KEY or GEMINI_API_KEY in ["SUA_CHAVE_API_AQUI", "sua_chave_de_api_do_gemini_aqui"]:
+        return image_url_or_base64
+
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    prompt = (
+        "Identify the bounding boxes of ALL brand names, product logos, store logos, watermarks, text overlays, or website URLs "
+        "present in the image. We want to remove all branding elements to make the image 100% clean and generic."
+    )
+    
+    models_to_try = [
+        'gemini-2.0-flash',
+        'gemini-2.0-flash-lite',
+        'gemini-2.5-flash-lite',
+        'gemini-2.5-flash',
+        'gemini-flash-latest'
+    ]
+    
+    global GEMINI_SEMAPHORE
+    if GEMINI_SEMAPHORE is None:
+        GEMINI_SEMAPHORE = asyncio.Semaphore(1)
+
+    detected_items = []
+    success = False
+    last_error = None
+
+    for model_name in models_to_try:
+        async with GEMINI_SEMAPHORE:
+            try:
+                loop = asyncio.get_event_loop()
+                def call_gemini():
+                    return client.models.generate_content(
+                        model=model_name,
+                        contents=[
+                            types.Part.from_bytes(
+                                data=image_bytes,
+                                mime_type=mime_type
+                            ),
+                            prompt
+                        ],
+                        config=types.GenerateContentConfig(
+                            response_mime_type="application/json",
+                            response_schema=WatermarkDetection,
+                            temperature=0.1
+                        )
+                    )
+                response = await loop.run_in_executor(None, call_gemini)
+                
+                if response.parsed:
+                    detected_items = response.parsed.detected_items
+                else:
+                    data = json.loads(response.text)
+                    detected_items = []
+                    for item in data.get("detected_items", []):
+                        detected_items.append(BoundingBox(**item))
+                success = True
+                print(f"[Watermark Removal] Successfully detected watermarks using model: {model_name}")
+                break
+            except Exception as e:
+                print(f"[Watermark Removal] Model {model_name} failed: {e}")
+                last_error = e
+                # Fallback to the next model immediately
+                continue
+
+    if not success:
+        print(f"[Watermark Removal] Failed to call Gemini (all models failed). Last error: {last_error}")
+        return image_url_or_base64
+
+    if not detected_items:
+        return image_url_or_base64
+
+    try:
+        def inpaint_job():
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if img is None:
+                return None
+            h, w, c = img.shape
+            mask = np.zeros((h, w), dtype=np.uint8)
+            for item in detected_items:
+                ymin_n, xmin_n, ymax_n, xmax_n = item.box_2d
+                ymin = int((ymin_n / 1000.0) * h)
+                xmin = int((xmin_n / 1000.0) * w)
+                ymax = int((ymax_n / 1000.0) * h)
+                xmax = int((xmax_n / 1000.0) * w)
+                
+                ymin = max(0, min(h - 1, ymin))
+                xmin = max(0, min(w - 1, xmin))
+                ymax = max(0, min(h - 1, ymax))
+                xmax = max(0, min(w - 1, xmax))
+                
+                padding = 4
+                ymin = max(0, ymin - padding)
+                xmin = max(0, xmin - padding)
+                ymax = min(h - 1, ymax + padding)
+                xmax = min(w - 1, xmax + padding)
+                
+                cv2.rectangle(mask, (xmin, ymin), (xmax, ymax), 255, -1)
+                
+            inpainted = cv2.inpaint(img, mask, inpaintRadius=7, flags=cv2.INPAINT_TELEA)
+            success_enc, encoded_img = cv2.imencode('.jpg', inpainted, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
+            if success_enc:
+                return encoded_img.tobytes()
+            return None
+
+        clean_bin = await loop.run_in_executor(None, inpaint_job)
+        if clean_bin:
+            encoded_base64 = base64.b64encode(clean_bin).decode('utf-8')
+            return f"data:image/jpeg;base64,{encoded_base64}"
+            
+    except Exception as e:
+        print(f"[Watermark Removal] Exception in inpainting: {e}")
+        
+    return image_url_or_base64
+
+async def extract_product_data(url: str, creative_video_url: str = None, target_language: str = "Espanhol da Colômbia", remove_watermarks: bool = True) -> Dict[str, Any]:
     """
     Raspa a página usando o Playwright e envia o conteúdo textual
     para o Gemini 1.5 Pro extrair de forma estruturada.
@@ -668,8 +886,50 @@ async def extract_product_data(url: str, creative_video_url: str = None, target_
             price_raw = "0"
         dados_limpos["price"] = str(price_raw).strip()
         
-        # Adiciona as 5 primeiras imagens do Playwright
-        dados_limpos["images"] = imagens_brutas[:5]
+        # Adiciona as 5 primeiras imagens do Playwright, limpando-as se remove_watermarks for True
+        if remove_watermarks:
+            # Limpa imagens da galeria (até 5 imagens) filtrando imagens que não contêm logos/badges
+            gallery_to_clean = [img for img in imagens_brutas[:5]]
+            print(f"[EXTRATOR] Iniciando remocao de marcas d'agua de {len(gallery_to_clean)} imagens da galeria...")
+            
+            async def clean_img_task(img):
+                if should_clean_image(img):
+                    return await remove_watermark_from_image(img)
+                return img
+                
+            cleaning_tasks = [clean_img_task(img) for img in gallery_to_clean]
+            cleaned_images = await asyncio.gather(*cleaning_tasks)
+            dados_limpos["images"] = cleaned_images
+            
+            # Limpa imagens internas do description_html
+            if "description_html" in dados_limpos and dados_limpos["description_html"]:
+                try:
+                    soup_desc = BeautifulSoup(dados_limpos["description_html"], 'html.parser')
+                    img_tags = soup_desc.find_all('img')
+                    imgs_to_clean = []
+                    for img_tag in img_tags:
+                        src = img_tag.get('src', '').strip()
+                        if src and should_clean_image(src) and src not in imgs_to_clean:
+                            imgs_to_clean.append(src)
+                            if len(imgs_to_clean) >= 3: # Limita a no máximo 3 imagens da descrição para poupar quota
+                                break
+                    
+                    if imgs_to_clean:
+                        print(f"[EXTRATOR] Limpando marcas d'agua de {len(imgs_to_clean)} imagens da copia HTML...")
+                        clean_desc_results = await asyncio.gather(*[remove_watermark_from_image(src) for src in imgs_to_clean])
+                        mapa_clean_desc = dict(zip(imgs_to_clean, clean_desc_results))
+                        
+                        # Substitui no HTML
+                        for img_tag in img_tags:
+                            src = img_tag.get('src', '').strip()
+                            if src in mapa_clean_desc:
+                                img_tag['src'] = mapa_clean_desc[src]
+                                
+                        dados_limpos["description_html"] = str(soup_desc)
+                except Exception as e_desc_clean:
+                    print(f"[EXTRATOR] Erro ao limpar marcas d'agua da copia HTML: {e_desc_clean}")
+        else:
+            dados_limpos["images"] = imagens_brutas[:5]
         return dados_limpos
     except Exception as parse_error:
         print(f"Erro ao analisar o JSON retornado pelo Gemini: {parse_error}")

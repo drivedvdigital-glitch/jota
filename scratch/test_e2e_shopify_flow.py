@@ -6,9 +6,9 @@ from dotenv import load_dotenv
 # Load env variables
 load_dotenv(dotenv_path=r"C:\Users\Usuário\.\.gemini\antigravity-ide\scratch\ai-agent-project\.env")
 
-shop_name = os.getenv("SHOPIFY_SHOP_NAME")
-access_token = os.getenv("SHOPIFY_ACCESS_TOKEN")
-client_id = os.getenv("SHOPIFY_CLIENT_ID")
+shop_name = os.getenv("SHOPIFY_SHOP_NAME") or os.getenv("SHOPIFY_SHOP_NAME_COLOMBIA")
+access_token = os.getenv("SHOPIFY_ACCESS_TOKEN") or os.getenv("SHOPIFY_ACCESS_TOKEN_COLOMBIA")
+client_id = os.getenv("SHOPIFY_CLIENT_ID") or os.getenv("SHOPIFY_CLIENT_ID_COLOMBIA")
 
 if not shop_name or not access_token:
     print("Variables in env missing!")

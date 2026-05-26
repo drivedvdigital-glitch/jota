@@ -63,6 +63,7 @@ class RequestExtrair(BaseModel):
     url: str
     creative_video_url: str | None = None
     country: str | None = "colombia"
+    remove_watermarks: bool | None = True
 
 # Modelo de resposta que encapsula o status e o produto completo
 class ResponseExtrair(BaseModel):
@@ -400,7 +401,8 @@ async def extrair_produto(request: RequestExtrair):
         country_conf = CONFIG_PAISES.get(country_key, CONFIG_PAISES["colombia"])
         target_lang = country_conf["idioma"]
         
-        dados_produto = await extract_product_data(url, creative_video, target_lang)
+        remove_w = True if request.remove_watermarks is None else request.remove_watermarks
+        dados_produto = await extract_product_data(url, creative_video, target_lang, remove_watermarks=remove_w)
         return {
             "status": "sucesso",
             "produto": dados_produto
@@ -676,6 +678,35 @@ async def enviar_shopify(produto: ProdutoCompleto, country: str = "colombia"):
         "X-Shopify-Access-Token": actual_token,
         "Content-Type": "application/json"
     }
+    
+    # Verifica se já existe um produto com o mesmo handle para evitar duplicações e imagens antigas
+    check_url = f"https://{shop_name}.myshopify.com/admin/api/2026-04/products.json?handle={handle_cleaned}"
+    existing_product_id = None
+    try:
+        loop = asyncio.get_event_loop()
+        def check_exists():
+            return requests.get(check_url, headers=headers, timeout=15)
+        res_check = await loop.run_in_executor(None, check_exists)
+        if res_check.status_code == 200:
+            products_found = res_check.json().get("products", [])
+            if products_found:
+                existing_product_id = products_found[0]["id"]
+                print(f"[SHOPIFY UPLOAD] Produto com handle '{handle_cleaned}' já existe (ID: {existing_product_id}). Deletando para evitar duplicação...")
+    except Exception as e_check:
+        print(f"[SHOPIFY UPLOAD] Erro ao verificar produto existente: {e_check}")
+
+    if existing_product_id:
+        delete_url = f"https://{shop_name}.myshopify.com/admin/api/2026-04/products/{existing_product_id}.json"
+        try:
+            def delete_existing():
+                return requests.delete(delete_url, headers=headers, timeout=15)
+            res_delete = await loop.run_in_executor(None, delete_existing)
+            if res_delete.status_code == 200:
+                print(f"[SHOPIFY UPLOAD] Produto antigo ID {existing_product_id} deletado com sucesso para evitar duplicação e mídias antigas.")
+            else:
+                print(f"[SHOPIFY UPLOAD] Erro ao deletar produto antigo (Código {res_delete.status_code}): {res_delete.text}")
+        except Exception as e_delete:
+            print(f"[SHOPIFY UPLOAD] Falha ao deletar produto antigo: {e_delete}")
     
     max_product_retries = 3
     response = None

@@ -1045,6 +1045,13 @@
                             <i class="fa-solid fa-arrow-right"></i>
                         </button>
                     </div>
+                    <!-- Additional Options -->
+                    <div style="margin-top: 1.25rem; display: flex; align-items: center; gap: 1.5rem; padding: 0 0.5rem;">
+                        <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-size: 0.88rem; color: var(--text-secondary); font-weight: 500; text-transform: none; letter-spacing: normal;">
+                            <input type="checkbox" id="remove-watermarks-check" checked style="width: 16px; height: 16px; accent-color: var(--accent-primary); cursor: pointer;">
+                            <span>Remover Marcas d'Água e Logos das Imagens (IA)</span>
+                        </label>
+                    </div>
                 </form>
 
                 
@@ -1261,6 +1268,7 @@
         const urlInput = document.getElementById('product-url');
         const creativeVideoUrlInput = document.getElementById('creative-video-url');
         const submitBtn = document.getElementById('submit-btn');
+        const removeWatermarksCheck = document.getElementById('remove-watermarks-check');
         const loader = document.getElementById('loader');
         const errorBox = document.getElementById('error-box');
         const errorMsg = document.getElementById('error-msg');
@@ -1541,7 +1549,8 @@
                     body: JSON.stringify({ 
                         url: url,
                         creative_video_url: creativeVideoUrlInput.value.trim() || null,
-                        country: countrySelect.value
+                        country: countrySelect.value,
+                        remove_watermarks: removeWatermarksCheck.checked
                     })
                 });
 
@@ -1810,7 +1819,8 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
                             url: url,
-                            country: countrySelect.value
+                            country: countrySelect.value,
+                            remove_watermarks: removeWatermarksCheck.checked
                         })
                     });
 

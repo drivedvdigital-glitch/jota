@@ -42,8 +42,13 @@ async def test_all():
         mock_put_response = MagicMock()
         mock_put_response.status_code = 200
         
+        mock_get_response = MagicMock()
+        mock_get_response.status_code = 200
+        mock_get_response.content = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15c4\x00\x00\x00\rIDATx\x9cc`\x00\x01\x00\x00\x0c\x00\x01\x04\x05q\x00\x00\x00\x00IEND\xaeB`\x82'
+        
         with patch('requests.post', return_value=mock_response) as mock_post, \
-             patch('requests.put', return_value=mock_put_response) as mock_put:
+             patch('requests.put', return_value=mock_put_response) as mock_put, \
+             patch('requests.get', return_value=mock_get_response) as mock_get:
             res = await enviar_shopify(product_data)
             
             # Validações do envio para a Shopify
