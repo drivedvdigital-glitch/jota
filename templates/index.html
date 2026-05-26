@@ -13,18 +13,24 @@
     
     <style>
         :root {
-            --bg-color: #080b11;
-            --sidebar-bg: #0d111b;
-            --card-bg: rgba(17, 22, 37, 0.65);
+            --bg-color: #030712;
+            --sidebar-bg: #090d16;
+            --card-bg: rgba(13, 18, 30, 0.45);
+            --card-border: rgba(255, 255, 255, 0.05);
             --border-color: rgba(255, 255, 255, 0.06);
-            --accent-primary: #8b5cf6;
-            --accent-secondary: #06b6d4;
-            --text-main: #f3f4f6;
+            --accent-primary: #a78bfa;
+            --accent-primary-rgb: 167, 139, 250;
+            --accent-secondary: #22d3ee;
+            --accent-secondary-rgb: 34, 211, 238;
+            --accent-success: #34d399;
+            --text-main: #f9fafb;
             --text-secondary: #9ca3af;
-            --glow: 0 0 20px rgba(139, 92, 246, 0.3);
-            --glow-secondary: 0 0 20px rgba(6, 182, 212, 0.3);
+            --text-muted: #6b7280;
+            --glow: 0 0 25px rgba(167, 139, 250, 0.25);
+            --glow-secondary: 0 0 25px rgba(34, 211, 238, 0.25);
             --font-main: 'Inter', sans-serif;
             --font-title: 'Outfit', sans-serif;
+            --transition-speed: 0.3s;
         }
 
         * {
@@ -36,24 +42,28 @@
         body {
             background-color: var(--bg-color);
             background-image: 
-                radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.1) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.1) 0px, transparent 50%);
+                radial-gradient(circle at 10% 20%, rgba(167, 139, 250, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(34, 211, 238, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.01) 0%, transparent 100%);
             background-attachment: fixed;
             color: var(--text-main);
             font-family: var(--font-main);
             min-height: 100vh;
             display: flex;
             overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
         }
 
         /* Sidebar Style */
         .sidebar {
             width: 280px;
-            background: var(--sidebar-bg);
+            background: rgba(9, 13, 22, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
-            padding: 2rem 1.5rem;
+            padding: 2.5rem 1.5rem;
             position: fixed;
             top: 0;
             bottom: 0;
@@ -64,23 +74,29 @@
         .logo-area {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 3rem;
+            gap: 0.85rem;
+            margin-bottom: 3.5rem;
         }
 
         .logo-area i {
-            font-size: 1.8rem;
+            font-size: 2rem;
             background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.5));
+            filter: drop-shadow(0 0 10px rgba(167, 139, 250, 0.4));
+            animation: floatLogo 4s ease-in-out infinite;
+        }
+
+        @keyframes floatLogo {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-4px) rotate(4deg); }
         }
 
         .logo-area h1 {
             font-family: var(--font-title);
-            font-size: 1.5rem;
+            font-size: 1.6rem;
             font-weight: 800;
-            background: linear-gradient(135deg, #a78bfa 0%, #22d3ee 100%);
+            background: linear-gradient(135deg, #c084fc 0%, #22d3ee 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             letter-spacing: -0.5px;
@@ -89,50 +105,72 @@
         .nav-menu {
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 0.6rem;
             flex: 1;
         }
 
         .nav-item {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            padding: 0.8rem 1rem;
+            gap: 0.85rem;
+            padding: 0.9rem 1.2rem;
             color: var(--text-secondary);
             text-decoration: none;
-            border-radius: 10px;
+            border-radius: 12px;
             font-weight: 500;
-            transition: all 0.2s ease;
+            transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, rgba(167, 139, 250, 0.05) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity var(--transition-speed) ease;
+            z-index: -1;
+        }
+
+        .nav-item:hover::before {
+            opacity: 1;
         }
 
         .nav-item:hover, .nav-item.active {
             color: var(--text-main);
-            background: rgba(255, 255, 255, 0.04);
+            transform: translateX(3px);
         }
 
         .nav-item.active {
             border-left: 3px solid var(--accent-primary);
-            border-radius: 0 10px 10px 0;
-            background: rgba(139, 92, 246, 0.06);
+            border-radius: 0 12px 12px 0;
+            background: rgba(167, 139, 250, 0.06);
             color: #c084fc;
+            box-shadow: inset 4px 0 10px rgba(167, 139, 250, 0.03);
         }
 
         .nav-item i {
-            font-size: 1.1rem;
+            font-size: 1.15rem;
             width: 20px;
             text-align: center;
         }
 
         /* Shopify Connection Widget */
         .sidebar-widget {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1rem;
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.01);
+            border-radius: 14px;
+            padding: 1.2rem;
             font-size: 0.85rem;
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
+            gap: 0.85rem;
+            margin-top: auto;
         }
 
         .widget-title {
@@ -140,7 +178,7 @@
             font-weight: 600;
             text-transform: uppercase;
             font-size: 0.7rem;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.75px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -149,9 +187,9 @@
         .widget-status {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            font-weight: 500;
-            color: #10b981;
+            gap: 0.6rem;
+            font-weight: 600;
+            color: var(--accent-success);
         }
 
         .widget-status.error {
@@ -163,17 +201,23 @@
             height: 8px;
             border-radius: 50%;
             background-color: currentColor;
-            box-shadow: 0 0 8px currentColor;
+            box-shadow: 0 0 10px currentColor;
+            animation: pulseStatus 2s infinite;
+        }
+
+        @keyframes pulseStatus {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
         }
 
         /* Main Content Style */
         .main-content {
             margin-left: 280px;
             flex: 1;
-            padding: 2.5rem;
+            padding: 3rem;
             display: flex;
             flex-direction: column;
-            gap: 2rem;
+            gap: 2.5rem;
             max-width: 1400px;
             width: calc(100% - 280px);
         }
@@ -181,31 +225,42 @@
         header {
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 0.6rem;
         }
 
         header h2 {
             font-family: var(--font-title);
-            font-size: 2.2rem;
+            font-size: 2.4rem;
             font-weight: 800;
             letter-spacing: -0.5px;
+            background: linear-gradient(135deg, var(--text-main) 30%, var(--text-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         header p {
             color: var(--text-secondary);
             font-weight: 300;
-            font-size: 1rem;
+            font-size: 1.05rem;
+            line-height: 1.5;
         }
 
         /* Glassmorphism Card Wrapper */
         .glass-card {
             background: var(--card-bg);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 1.75rem;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 
+                0 10px 40px 0 rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+            transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.1);
         }
 
         /* URL Extraction Box */
@@ -213,22 +268,29 @@
             position: relative;
             display: flex;
             align-items: center;
-            border-radius: 12px;
-            background: rgba(8, 11, 17, 0.7);
+            border-radius: 14px;
+            background: rgba(4, 6, 12, 0.8);
             border: 1px solid var(--border-color);
-            padding: 0.25rem;
+            padding: 0.35rem;
+            transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .search-box-wrapper:focus-within {
             border-color: var(--accent-primary);
-            box-shadow: var(--glow);
+            box-shadow: 0 0 25px rgba(167, 139, 250, 0.15);
+            background: rgba(4, 6, 12, 0.9);
         }
 
         .search-box-wrapper i {
             position: absolute;
-            left: 1.25rem;
+            left: 1.35rem;
             color: var(--text-secondary);
-            font-size: 1.1rem;
+            font-size: 1.15rem;
+            transition: color var(--transition-speed);
+        }
+
+        .search-box-wrapper:focus-within i {
+            color: var(--accent-primary);
         }
 
         .search-input {
@@ -238,41 +300,55 @@
             outline: none;
             color: var(--text-main);
             font-size: 0.95rem;
-            padding: 0.85rem 1rem 0.85rem 3rem;
+            padding: 0.9rem 1rem 0.9rem 3.2rem;
             font-family: var(--font-main);
         }
 
         .search-button {
-            background: linear-gradient(135deg, var(--accent-primary) 0%, #7c3aed 100%);
+            background: linear-gradient(135deg, var(--accent-primary) 0%, #8b5cf6 50%, #6d28d9 100%);
+            background-size: 200% auto;
             border: none;
             outline: none;
             color: white;
-            padding: 0.8rem 1.75rem;
-            border-radius: 9px;
+            padding: 0.9rem 2rem;
+            border-radius: 11px;
             font-weight: 600;
             font-size: 0.95rem;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
-            transition: all 0.2s ease;
+            gap: 0.6rem;
+            box-shadow: 0 4px 15px rgba(167, 139, 250, 0.3);
+            transition: all 0.4s ease;
         }
 
         .search-button:hover {
-            transform: translateY(-1px);
-            box-shadow: var(--glow);
+            background-position: right center;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(167, 139, 250, 0.45);
+        }
+
+        .search-button:active {
+            transform: translateY(0);
+        }
+
+        .search-button i {
+            transition: transform 0.3s ease;
+        }
+
+        .search-button:hover i {
+            transform: translateX(4px);
         }
 
         /* Search Box Layout Grid */
         .search-box-grid {
             display: grid;
             grid-template-columns: 1fr 1fr auto;
-            gap: 1rem;
+            gap: 1.25rem;
             align-items: center;
         }
 
-        @media (max-width: 900px) {
+        @media (max-width: 950px) {
             .search-box-grid {
                 grid-template-columns: 1fr;
             }
@@ -282,19 +358,25 @@
             }
         }
 
-
         /* Error/Loading Indicators */
         .error-box {
             display: none;
-            background: rgba(239, 68, 68, 0.08);
-            border: 1px solid rgba(239, 68, 68, 0.2);
+            background: rgba(239, 68, 68, 0.06);
+            border: 1px solid rgba(239, 68, 68, 0.15);
             color: #f87171;
-            padding: 1rem;
-            border-radius: 10px;
+            padding: 1.2rem;
+            border-radius: 12px;
             align-items: center;
-            gap: 0.75rem;
-            margin-top: 1rem;
+            gap: 0.85rem;
+            margin-top: 1.25rem;
             font-size: 0.9rem;
+            animation: shake 0.4s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
         }
 
         .loader-wrapper {
@@ -302,17 +384,17 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 1rem;
-            padding: 2.5rem 0;
+            gap: 1.25rem;
+            padding: 3rem 0 2rem;
         }
 
         .spinner {
-            width: 44px;
-            height: 44px;
-            border: 3px solid rgba(6, 182, 212, 0.1);
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(34, 211, 238, 0.08);
             border-radius: 50%;
             border-top-color: var(--accent-secondary);
-            animation: spin 1s linear infinite;
+            animation: spin 1s cubic-bezier(0.55, 0.085, 0.68, 0.53) infinite;
             box-shadow: var(--glow-secondary);
         }
 
@@ -321,29 +403,68 @@
         }
 
         .loading-text {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            font-weight: 500;
+            color: var(--text-main);
+            font-size: 1rem;
+            font-weight: 600;
             letter-spacing: 0.5px;
-            animation: pulse 1.5s infinite;
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 1; }
+        /* Dynamic Loading Steps */
+        .loading-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+            margin-top: 1rem;
+            width: 100%;
+            max-width: 440px;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            padding: 0.65rem 0.95rem;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .step-item i {
+            font-size: 0.9rem;
+            width: 16px;
+            text-align: center;
+        }
+
+        .step-item.active {
+            color: var(--accent-secondary);
+            background: rgba(34, 211, 238, 0.04);
+            border-color: rgba(34, 211, 238, 0.1);
+        }
+
+        .step-item.completed {
+            color: var(--accent-success);
+            background: rgba(52, 211, 153, 0.04);
+            border-color: rgba(52, 211, 153, 0.1);
         }
 
         /* Editor Layout (Workspace) */
         .workspace {
-            display: none; /* Visible after extraction */
-            grid-template-columns: 1fr 340px;
-            gap: 2rem;
+            display: none;
+            grid-template-columns: 1fr 350px;
+            gap: 2.5rem;
             align-items: start;
         }
 
-        @media (max-width: 1050px) {
+        @media (max-width: 1100px) {
             .workspace {
                 grid-template-columns: 1fr;
+            }
+            .sticky-summary {
+                position: relative !important;
+                top: 0 !important;
             }
         }
 
@@ -351,14 +472,16 @@
         .editor-container {
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 2rem;
         }
 
         .tabs-header {
             display: flex;
-            gap: 0.5rem;
+            gap: 0.6rem;
             border-bottom: 1px solid var(--border-color);
-            padding-bottom: 0.5rem;
+            padding-bottom: 0.6rem;
+            margin-bottom: 0.5rem;
+            overflow-x: auto;
         }
 
         .tab-button {
@@ -367,13 +490,27 @@
             color: var(--text-secondary);
             font-weight: 600;
             font-size: 0.9rem;
-            padding: 0.6rem 1.2rem;
+            padding: 0.75rem 1.4rem;
             cursor: pointer;
-            border-radius: 8px;
-            transition: all 0.2s ease;
+            border-radius: 10px;
+            transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.6rem;
+            position: relative;
+            white-space: nowrap;
+        }
+
+        .tab-button::after {
+            content: '';
+            position: absolute;
+            bottom: -0.6rem;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--accent-primary);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
         }
 
         .tab-button:hover {
@@ -383,115 +520,131 @@
 
         .tab-button.active {
             color: var(--accent-primary);
-            background: rgba(139, 92, 246, 0.08);
+            background: rgba(167, 139, 250, 0.06);
+        }
+
+        .tab-button.active::after {
+            transform: scaleX(1);
         }
 
         .tab-content {
             display: none;
-            animation: fadeIn 0.4s ease;
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .tab-content.active {
             display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            opacity: 1;
+            transform: translateY(0);
         }
 
         /* Form Fields Stylings */
         .form-group {
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
-            margin-bottom: 1.25rem;
+            gap: 0.6rem;
+            margin-bottom: 1.5rem;
         }
 
         .form-group label {
             text-transform: uppercase;
-            font-size: 0.7rem;
+            font-size: 0.72rem;
             font-weight: 700;
             color: var(--text-secondary);
-            letter-spacing: 0.75px;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
         }
 
         .form-control {
-            background: rgba(8, 11, 17, 0.6);
+            background: rgba(4, 6, 12, 0.7);
             border: 1px solid var(--border-color);
-            border-radius: 10px;
+            border-radius: 12px;
             color: var(--text-main);
-            padding: 0.8rem 1rem;
+            padding: 0.9rem 1.1rem;
             font-family: var(--font-main);
             font-size: 0.9rem;
             outline: none;
             width: 100%;
-            transition: all 0.2s ease;
+            transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .form-control:focus {
             border-color: var(--accent-primary);
-            box-shadow: 0 0 10px rgba(139, 92, 246, 0.15);
+            box-shadow: 0 0 15px rgba(167, 139, 250, 0.12), inset 0 2px 4px rgba(0, 0, 0, 0.05);
+            background: rgba(4, 6, 12, 0.85);
         }
 
         textarea.form-control {
             resize: vertical;
-            min-height: 100px;
+            min-height: 120px;
         }
 
         /* Dynamic Benefits Manager */
         .benefits-list {
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
-            margin-bottom: 1rem;
+            gap: 0.85rem;
+            margin-bottom: 1.25rem;
         }
 
         .benefit-row {
             display: flex;
-            gap: 0.5rem;
+            gap: 0.6rem;
             align-items: center;
+            animation: slideInDown 0.3s ease;
+        }
+
+        @keyframes slideInDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .benefit-row .form-control {
-            padding: 0.65rem 0.9rem;
+            padding: 0.8rem 1rem;
         }
 
         .btn-icon-danger {
-            background: rgba(239, 68, 68, 0.1);
+            background: rgba(239, 68, 68, 0.08);
             color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            padding: 0.65rem;
-            border-radius: 9px;
+            border: 1px solid rgba(239, 68, 68, 0.15);
+            padding: 0.8rem;
+            border-radius: 11px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s ease;
+            transition: all var(--transition-speed) ease;
         }
 
         .btn-icon-danger:hover {
             background: #ef4444;
             color: white;
+            border-color: #ef4444;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
         }
 
         .btn-action-outline {
-            background: rgba(139, 92, 246, 0.05);
-            border: 1px dashed rgba(139, 92, 246, 0.3);
+            background: rgba(167, 139, 250, 0.03);
+            border: 1px dashed rgba(167, 139, 250, 0.3);
             color: #c084fc;
-            padding: 0.7rem 1.2rem;
-            border-radius: 10px;
+            padding: 0.8rem 1.4rem;
+            border-radius: 12px;
             font-size: 0.85rem;
             font-weight: 600;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-            transition: all 0.2s ease;
+            gap: 0.6rem;
+            transition: all var(--transition-speed) ease;
         }
 
         .btn-action-outline:hover {
-            background: rgba(139, 92, 246, 0.1);
+            background: rgba(167, 139, 250, 0.08);
             border-color: var(--accent-primary);
             color: white;
         }
@@ -500,11 +653,11 @@
         .split-editor {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
-            min-height: 500px;
+            gap: 2rem;
+            min-height: 520px;
         }
 
-        @media (max-width: 900px) {
+        @media (max-width: 950px) {
             .split-editor {
                 grid-template-columns: 1fr;
             }
@@ -513,117 +666,141 @@
         .html-code-pane {
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 0.6rem;
         }
 
         .html-textarea {
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'Fira Code', 'Courier New', Courier, monospace;
             font-size: 0.85rem;
-            line-height: 1.5;
-            color: #38bdf8;
-            background: #06090e !important;
+            line-height: 1.6;
+            color: var(--accent-secondary);
+            background: #020408 !important;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.2rem;
             flex: 1;
-            min-height: 450px;
+            min-height: 480px;
+            box-shadow: inset 0 4px 12px rgba(0,0,0,0.5);
         }
 
         .html-preview-pane {
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 0.6rem;
         }
 
         .html-preview-container {
             border: 1px solid var(--border-color);
-            background: rgba(255, 255, 255, 0.02);
-            border-radius: 10px;
-            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.01);
+            border-radius: 12px;
+            padding: 2rem;
             overflow-y: auto;
             max-height: 520px;
             font-size: 0.95rem;
-            line-height: 1.6;
+            line-height: 1.7;
+            color: #d1d5db;
         }
 
         .html-preview-container img {
             max-width: 100%;
             height: auto;
-            border-radius: 8px;
-            margin: 1rem auto;
+            border-radius: 12px;
+            margin: 1.5rem auto;
             display: block;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
         }
 
         /* Images Grid Gallery */
         .images-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1.2rem;
         }
 
         .image-card {
             aspect-ratio: 1;
-            border-radius: 12px;
+            border-radius: 16px;
             border: 1px solid var(--border-color);
-            background: #0c0f17;
+            background: #090c15;
             position: relative;
             cursor: pointer;
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s ease;
+            transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        .image-card:hover {
+            transform: translateY(-4px) scale(1.02);
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
         }
 
         .image-card img {
-            max-width: 100%;
-            max-height: 100%;
+            max-width: 90%;
+            max-height: 90%;
             object-fit: contain;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 8px;
+        }
+
+        .image-card:hover img {
+            transform: scale(1.05);
         }
 
         /* Image selection states */
         .image-card.selected {
             border-color: var(--accent-primary);
+            box-shadow: 0 0 15px rgba(167, 139, 250, 0.25);
         }
 
         .image-card .checkbox-overlay {
             position: absolute;
-            top: 0.5rem;
-            right: 0.5rem;
-            width: 22px;
-            height: 22px;
-            background: rgba(12, 15, 23, 0.85);
-            border: 2px solid rgba(255, 255, 255, 0.2);
+            top: 0.75rem;
+            right: 0.75rem;
+            width: 24px;
+            height: 24px;
+            background: rgba(9, 12, 21, 0.9);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             color: transparent;
-            font-size: 0.65rem;
-            transition: all 0.15s ease;
+            font-size: 0.75rem;
+            transition: all 0.2s ease;
+            z-index: 5;
         }
 
         .image-card.selected .checkbox-overlay {
             background: var(--accent-primary);
             border-color: var(--accent-primary);
-            color: white;
-            box-shadow: 0 0 6px var(--accent-primary);
+            color: #0c0f17;
+            font-weight: bold;
+            box-shadow: 0 0 8px var(--accent-primary);
         }
 
         .image-card .delete-btn {
             position: absolute;
-            bottom: -32px;
+            bottom: -36px;
             left: 0;
             right: 0;
-            height: 30px;
+            height: 34px;
             background: rgba(239, 68, 68, 0.95);
+            backdrop-filter: blur(5px);
             border: none;
             color: white;
-            font-size: 0.75rem;
+            font-size: 0.8rem;
             font-weight: 600;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.25rem;
-            transition: all 0.2s ease;
+            gap: 0.35rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10;
         }
 
         .image-card:hover .delete-btn {
@@ -633,10 +810,10 @@
         /* Summary Sticky Panel */
         .sticky-summary {
             position: sticky;
-            top: 2rem;
+            top: 3rem;
             display: flex;
             flex-direction: column;
-            gap: 1.25rem;
+            gap: 1.5rem;
         }
 
         .summary-header {
@@ -644,70 +821,83 @@
             flex-direction: column;
             align-items: center;
             text-align: center;
-            padding-bottom: 1.25rem;
+            padding-bottom: 1.5rem;
             border-bottom: 1px solid var(--border-color);
         }
 
         .summary-cover {
-            width: 140px;
-            height: 140px;
-            border-radius: 12px;
-            background: #0c0f17;
+            width: 160px;
+            height: 160px;
+            border-radius: 16px;
+            background: #090c15;
             border: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            margin-bottom: 1rem;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .summary-cover:hover {
+            transform: scale(1.03);
         }
 
         .summary-cover img {
-            max-width: 100%;
-            max-height: 100%;
+            max-width: 90%;
+            max-height: 90%;
             object-fit: contain;
         }
 
         .summary-title {
             font-family: var(--font-title);
             font-weight: 700;
-            font-size: 1.15rem;
+            font-size: 1.2rem;
             color: var(--text-main);
             overflow: hidden;
             text-overflow: ellipsis;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
-            line-height: 1.3;
+            line-height: 1.4;
         }
 
         .summary-price {
-            font-size: 1.35rem;
+            font-size: 1.45rem;
             font-weight: 800;
             color: var(--accent-secondary);
-            margin-top: 0.5rem;
+            margin-top: 0.6rem;
+            text-shadow: 0 0 15px rgba(34, 211, 238, 0.2);
         }
 
         .btn-upload-shopify {
-            background: linear-gradient(135deg, var(--accent-primary) 0%, #7c3aed 100%);
+            background: linear-gradient(135deg, var(--accent-primary) 0%, #8b5cf6 50%, #6d28d9 100%);
+            background-size: 200% auto;
             border: none;
             color: white;
             width: 100%;
-            padding: 0.9rem;
-            border-radius: 12px;
+            padding: 1rem;
+            border-radius: 14px;
             font-weight: 700;
-            font-size: 0.95rem;
+            font-size: 1rem;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.6rem;
-            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
-            transition: all 0.2s ease;
+            gap: 0.75rem;
+            box-shadow: 0 4px 15px rgba(167, 139, 250, 0.3);
+            transition: all 0.4s ease;
         }
 
         .btn-upload-shopify:hover:not(:disabled) {
+            background-position: right center;
             transform: translateY(-2px);
-            box-shadow: var(--glow);
+            box-shadow: 0 6px 20px rgba(167, 139, 250, 0.45);
+        }
+
+        .btn-upload-shopify:active:not(:disabled) {
+            transform: translateY(0);
         }
 
         .btn-upload-shopify:disabled {
@@ -722,22 +912,23 @@
         .shopify-status-box {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            padding: 0.8rem 1rem;
-            border-radius: 10px;
-            font-size: 0.85rem;
+            gap: 0.85rem;
+            padding: 1rem 1.2rem;
+            border-radius: 12px;
+            font-size: 0.88rem;
             border: 1px solid transparent;
-            line-height: 1.4;
+            line-height: 1.5;
+            animation: fadeIn 0.3s ease;
         }
 
         .status-info {
-            background: rgba(59, 130, 246, 0.08);
+            background: rgba(59, 130, 246, 0.06);
             border-color: rgba(59, 130, 246, 0.15);
             color: #60a5fa;
         }
 
         .status-success {
-            background: rgba(16, 185, 129, 0.08);
+            background: rgba(16, 185, 129, 0.06);
             border-color: rgba(16, 185, 129, 0.15);
             color: #34d399;
         }
@@ -749,7 +940,7 @@
         }
 
         .status-error {
-            background: rgba(239, 68, 68, 0.08);
+            background: rgba(239, 68, 68, 0.06);
             border-color: rgba(239, 68, 68, 0.15);
             color: #f87171;
         }
@@ -760,14 +951,14 @@
             height: 8px;
         }
         ::-webkit-scrollbar-track {
-            background: #080b11;
+            background: #030712;
         }
         ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.06);
+            background: rgba(255, 255, 255, 0.08);
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.15);
         }
     </style>
 </head>
@@ -779,16 +970,30 @@
             <h1>EKopy</h1>
         </div>
         
+        <!-- Country Selector -->
+        <div style="margin-bottom: 2rem;">
+            <label style="font-size: 0.72rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.75px; margin-bottom: 0.5rem; display: block;">País de Destino</label>
+            <select id="country-select" style="width: 100%; background: rgba(4, 6, 12, 0.7); border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-main); padding: 0.75rem 1rem; font-family: var(--font-main); font-size: 0.9rem; outline: none; cursor: pointer; transition: border-color 0.3s;">
+                <option value="colombia">🇨🇴 Colômbia</option>
+                <option value="romania">🇷🇴 Romênia</option>
+            </select>
+        </div>
+
         <nav class="nav-menu">
-            <a href="#" class="nav-item active">
+            <a href="#" class="nav-item active" id="nav-single-import">
                 <i class="fa-solid fa-link"></i>
                 <span>Importar Único</span>
             </a>
-            <a href="#" class="nav-item">
+            <a href="#" class="nav-item" id="nav-bulk-import">
+                <i class="fa-solid fa-layer-group"></i>
+                <span>Importar em Massa</span>
+            </a>
+            <a href="#" class="nav-item" id="nav-settings">
                 <i class="fa-solid fa-gear"></i>
                 <span>Configurações</span>
             </a>
         </nav>
+
 
         <!-- Shopify Keys Status -->
         <div class="sidebar-widget">
@@ -805,164 +1010,250 @@
 
     <!-- Main Content Panel -->
     <main class="main-content">
-        <header>
-            <h2>Importar um Produto Único</h2>
-            <p>Copie a URL de qualquer loja virtual para carregar os metadados, copy de vendas e imagens do produto de forma interativa.</p>
-        </header>
+        <!-- Single Import View -->
+        <div id="view-single-import" style="display: flex; flex-direction: column; gap: 2.5rem;">
+            <header>
+                <h2>Importar um Produto Único</h2>
+                <p>Copie a URL de qualquer loja virtual para carregar os metadados, copy de vendas e imagens do produto de forma interativa.</p>
+            </header>
 
-        <!-- Search Input Box -->
-        <div class="glass-card">
-            <form id="extract-form">
-                <div class="search-box-grid">
-                    <div class="search-box-wrapper">
-                        <i class="fa-solid fa-link"></i>
-                        <input 
-                            type="url" 
-                            id="product-url" 
-                            class="search-input" 
-                            placeholder="Cole a URL do produto aqui..." 
-                            required
-                        >
+            <!-- Search Input Box -->
+            <div class="glass-card">
+                <form id="extract-form">
+                    <div class="search-box-grid">
+                        <div class="search-box-wrapper">
+                            <i class="fa-solid fa-link"></i>
+                            <input 
+                                type="url" 
+                                id="product-url" 
+                                class="search-input" 
+                                placeholder="Cole a URL do produto aqui..." 
+                                required
+                            >
+                        </div>
+                        <div class="search-box-wrapper">
+                            <i class="fa-solid fa-circle-play"></i>
+                            <input 
+                                type="url" 
+                                id="creative-video-url" 
+                                class="search-input" 
+                                placeholder="URL de Vídeo do Criativo (Opcional)..."
+                            >
+                        </div>
+                        <button type="submit" class="search-button" id="submit-btn">
+                            <span>Importar</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </button>
                     </div>
-                    <div class="search-box-wrapper">
-                        <i class="fa-solid fa-circle-play"></i>
-                        <input 
-                            type="url" 
-                            id="creative-video-url" 
-                            class="search-input" 
-                            placeholder="URL de Vídeo do Criativo (Opcional)..."
-                        >
-                    </div>
-                    <button type="submit" class="search-button" id="submit-btn">
-                        <span>Importar</span>
-                        <i class="fa-solid fa-arrow-right"></i>
-                    </button>
+                </form>
+
+                
+                <div class="error-box" id="error-box">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span id="error-msg">Erro ao carregar dados. Tente novamente.</span>
                 </div>
-            </form>
 
-            
-            <div class="error-box" id="error-box">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-                <span id="error-msg">Erro ao carregar dados. Tente novamente.</span>
+                <!-- Loader -->
+                <div class="loader-wrapper" id="loader">
+                    <div class="spinner"></div>
+                    <div class="loading-text">Importação em Andamento</div>
+                    <div class="loading-steps">
+                        <div class="step-item" id="step-connect">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i>
+                            <span>Conectando ao navegador Playwright...</span>
+                        </div>
+                        <div class="step-item" id="step-scrape">
+                            <i class="fa-solid fa-circle"></i>
+                            <span>Extraindo dados da página e mídias...</span>
+                        </div>
+                        <div class="step-item" id="step-ai">
+                            <i class="fa-solid fa-circle"></i>
+                            <span>Traduzindo e criando copy com Gemini Pro...</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Loader -->
-            <div class="loader-wrapper" id="loader">
-                <div class="spinner"></div>
-                <div class="loading-text">Raspando e sintetizando os dados com Playwright e Gemini...</div>
+            <!-- Product Editor Workspace (Hidden until extracted) -->
+            <section class="workspace" id="product-workspace">
+                <div class="editor-container">
+                    <div class="glass-card">
+                        <!-- Tab buttons -->
+                        <div class="tabs-header">
+                            <button class="tab-button active" data-tab="tab-geral">
+                                <i class="fa-solid fa-pen-to-square"></i> Geral
+                            </button>
+                            <button class="tab-button" data-tab="tab-copy">
+                                <i class="fa-solid fa-code"></i> Copy HTML
+                            </button>
+                            <button class="tab-button" data-tab="tab-features">
+                                <i class="fa-solid fa-circle-check"></i> Benefícios
+                            </button>
+                            <button class="tab-button" data-tab="tab-images">
+                                <i class="fa-solid fa-images"></i> Imagens
+                            </button>
+                        </div>
+
+                        <!-- Geral tab -->
+                        <div class="tab-content active" id="tab-geral" style="margin-top: 1.5rem;">
+                            <div class="form-group">
+                                <label for="edit-title">Título do Produto</label>
+                                <input type="text" id="edit-title" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-handle">Identificador de URL (Handle)</label>
+                                <input type="text" id="edit-handle" class="form-control" placeholder="ex: proyector-mini">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-price">Preço</label>
+                                <input type="text" id="edit-price" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-seo-desc">Descrição SEO</label>
+                                <textarea id="edit-seo-desc" class="form-control"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Copy HTML split editor tab -->
+                        <div class="tab-content" id="tab-copy" style="margin-top: 1.5rem;">
+                            <div class="split-editor">
+                                <!-- Left HTML Area -->
+                                <div class="html-code-pane">
+                                    <div class="form-group" style="height: 100%; margin-bottom: 0;">
+                                        <label>Código HTML da Descrição</label>
+                                        <textarea id="edit-copy-html" class="form-control html-textarea"></textarea>
+                                    </div>
+                                </div>
+                                <!-- Right Live Render Preview -->
+                                <div class="html-preview-pane">
+                                    <label style="text-transform: uppercase; font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.75px; margin-bottom: 0.5rem;">Visualização em Tempo Real</label>
+                                    <div class="html-preview-container" id="copy-html-preview">
+                                        <!-- Dynamic visual preview -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Features/Benefits tab -->
+                        <div class="tab-content" id="tab-features" style="margin-top: 1.5rem;">
+                            <div class="form-group">
+                                <label>Principais Benefícios do Produto</label>
+                                <div class="benefits-list" id="edit-benefits-container">
+                                    <!-- Dynamic benefits list inputs -->
+                                </div>
+                                <button type="button" class="btn-action-outline" id="add-benefit-btn">
+                                    <i class="fa-solid fa-plus"></i> Adicionar Benefício
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Images tab -->
+                        <div class="tab-content" id="tab-images" style="margin-top: 1.5rem;">
+                            <div class="form-group">
+                                <label style="margin-bottom: 0.75rem; display: block;">Selecione as imagens para enviar (Clique para selecionar/deselecionar)</label>
+                                <div class="images-grid" id="edit-images-grid">
+                                    <!-- Dynamic images grid -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sticky Summary Sidebar Panel -->
+                <div class="sticky-summary">
+                    <div class="glass-card">
+                        <div class="summary-header">
+                            <div class="summary-cover" id="summary-cover-box">
+                                <img src="" alt="Imagem do Produto" id="summary-cover-img">
+                            </div>
+                            <div class="summary-title" id="summary-title-text">Título do Produto</div>
+                            <div class="summary-price" id="summary-price-text">R$ 0,00</div>
+                        </div>
+                        
+                        <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                            <button type="button" class="btn-upload-shopify" id="upload-api-btn">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                                <span>Enviar p/ Shopify</span>
+                            </button>
+                            
+                            <div class="shopify-status-box" id="shopify-status-box" style="display: none;">
+                                <i class="fa-solid fa-circle-info" id="status-icon"></i>
+                                <span id="shopify-status-msg">Iniciando envio...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Bulk Import View -->
+        <div id="view-bulk-import" style="display: none; flex-direction: column; gap: 2.5rem;">
+            <header>
+                <h2>Importar Produtos em Massa</h2>
+                <p>Cole as URLs de produtos concorrentes (uma por linha) para processar a cópia de conteúdo e o envio automático para a Shopify.</p>
+            </header>
+
+            <div class="glass-card" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <div class="form-group" style="margin-bottom: 0.5rem;">
+                    <label for="bulk-urls">URLs dos Produtos (uma por linha)</label>
+                    <textarea 
+                        id="bulk-urls" 
+                        class="form-control" 
+                        placeholder="https://loja-concorrente1.com/products/produto-a&#10;https://loja-concorrente2.com/products/produto-b"
+                        style="min-height: 180px; font-family: monospace; font-size: 0.9rem; line-height: 1.6;"
+                    ></textarea>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem;">
+                    <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; text-transform: none; font-size: 0.9rem; font-weight: 500; color: var(--text-main);">
+                        <input type="checkbox" id="bulk-auto-upload" checked style="width: 18px; height: 18px; accent-color: var(--accent-primary); cursor: pointer;">
+                        <span>Enviar automaticamente para o Shopify como Rascunho</span>
+                    </label>
+                </div>
+
+                <button type="button" class="search-button" id="bulk-start-btn" style="align-self: flex-start;">
+                    <i class="fa-solid fa-play"></i>
+                    <span>Iniciar Importação em Lote</span>
+                </button>
+            </div>
+
+            <!-- Bulk Progress Area -->
+            <div class="glass-card" id="bulk-progress-card" style="display: none; flex-direction: column; gap: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 1.05rem;">
+                    <span id="bulk-progress-title">Progresso: 0 / 0 Processados</span>
+                    <span id="bulk-progress-pct" style="color: var(--accent-secondary);">0%</span>
+                </div>
+                
+                <!-- Progress bar container -->
+                <div style="width: 100%; height: 8px; background: rgba(255, 255, 255, 0.05); border-radius: 4px; overflow: hidden;">
+                    <div id="bulk-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-secondary) 100%); transition: width 0.4s ease;"></div>
+                </div>
+
+                <div style="display: flex; gap: 1.5rem; font-size: 0.88rem; color: var(--text-secondary);">
+                    <div><i class="fa-solid fa-circle-check" style="color: var(--accent-success); margin-right: 4px;"></i> Sucesso: <strong id="bulk-success-count" style="color: var(--text-main);">0</strong></div>
+                    <div><i class="fa-solid fa-circle-xmark" style="color: #ef4444; margin-right: 4px;"></i> Falhas: <strong id="bulk-fail-count" style="color: var(--text-main);">0</strong></div>
+                </div>
+
+                <!-- Bulk Status Table -->
+                <div style="overflow-x: auto; border: 1px solid var(--border-color); border-radius: 12px; background: rgba(0, 0, 0, 0.2);">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.02); color: var(--text-secondary); font-weight: 600;">
+                                <th style="padding: 1rem 1.25rem; width: 60px;">#</th>
+                                <th style="padding: 1rem 1.25rem;">URL de Origem</th>
+                                <th style="padding: 1rem 1.25rem; min-width: 250px;">Produto</th>
+                                <th style="padding: 1rem 1.25rem; width: 220px;">Status</th>
+                                <th style="padding: 1rem 1.25rem; width: 180px; text-align: right;">Shopify Admin</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bulk-table-body">
+                            <!-- Dynamic rows will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <!-- Product Editor Workspace (Hidden until extracted) -->
-        <section class="workspace" id="product-workspace">
-            <div class="editor-container">
-                <div class="glass-card">
-                    <!-- Tab buttons -->
-                    <div class="tabs-header">
-                        <button class="tab-button active" data-tab="tab-geral">
-                            <i class="fa-solid fa-pen-to-square"></i> Geral
-                        </button>
-                        <button class="tab-button" data-tab="tab-copy">
-                            <i class="fa-solid fa-code"></i> Copy HTML
-                        </button>
-                        <button class="tab-button" data-tab="tab-features">
-                            <i class="fa-solid fa-circle-check"></i> Benefícios
-                        </button>
-                        <button class="tab-button" data-tab="tab-images">
-                            <i class="fa-solid fa-images"></i> Imagens
-                        </button>
-                    </div>
-
-                    <!-- Geral tab -->
-                    <div class="tab-content active" id="tab-geral" style="margin-top: 1.5rem;">
-                        <div class="form-group">
-                            <label for="edit-title">Título do Produto</label>
-                            <input type="text" id="edit-title" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label for="edit-handle">Identificador de URL (Handle)</label>
-                            <input type="text" id="edit-handle" class="form-control" placeholder="ex: proyector-mini">
-                        </div>
-                        <div class="form-group">
-                            <label for="edit-price">Preço</label>
-                            <input type="text" id="edit-price" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label for="edit-seo-desc">Descrição SEO</label>
-                            <textarea id="edit-seo-desc" class="form-control"></textarea>
-                        </div>
-                    </div>
-
-                    <!-- Copy HTML split editor tab -->
-                    <div class="tab-content" id="tab-copy" style="margin-top: 1.5rem;">
-                        <div class="split-editor">
-                            <!-- Left HTML Area -->
-                            <div class="html-code-pane">
-                                <div class="form-group" style="height: 100%; margin-bottom: 0;">
-                                    <label>Código HTML da Descrição</label>
-                                    <textarea id="edit-copy-html" class="form-control html-textarea"></textarea>
-                                </div>
-                            </div>
-                            <!-- Right Live Render Preview -->
-                            <div class="html-preview-pane">
-                                <label style="text-transform: uppercase; font-size: 0.7rem; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.75px; margin-bottom: 0.5rem;">Visualização em Tempo Real</label>
-                                <div class="html-preview-container" id="copy-html-preview">
-                                    <!-- Dynamic visual preview -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Features/Benefits tab -->
-                    <div class="tab-content" id="tab-features" style="margin-top: 1.5rem;">
-                        <div class="form-group">
-                            <label>Principais Benefícios do Produto</label>
-                            <div class="benefits-list" id="edit-benefits-container">
-                                <!-- Dynamic benefits list inputs -->
-                            </div>
-                            <button type="button" class="btn-action-outline" id="add-benefit-btn">
-                                <i class="fa-solid fa-plus"></i> Adicionar Benefício
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Images tab -->
-                    <div class="tab-content" id="tab-images" style="margin-top: 1.5rem;">
-                        <div class="form-group">
-                            <label style="margin-bottom: 0.75rem; display: block;">Selecione as imagens para enviar (Clique para selecionar/deselecionar)</label>
-                            <div class="images-grid" id="edit-images-grid">
-                                <!-- Dynamic images grid -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sticky Summary Sidebar Panel -->
-            <div class="sticky-summary">
-                <div class="glass-card">
-                    <div class="summary-header">
-                        <div class="summary-cover" id="summary-cover-box">
-                            <img src="" alt="Imagem do Produto" id="summary-cover-img">
-                        </div>
-                        <div class="summary-title" id="summary-title-text">Título do Produto</div>
-                        <div class="summary-price" id="summary-price-text">R$ 0,00</div>
-                    </div>
-                    
-                    <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
-                        <button type="button" class="btn-upload-shopify" id="upload-api-btn">
-                            <i class="fa-solid fa-cloud-arrow-up"></i>
-                            <span>Enviar p/ Shopify</span>
-                        </button>
-                        
-                        <div class="shopify-status-box" id="shopify-status-box" style="display: none;">
-                            <i class="fa-solid fa-circle-info" id="status-icon"></i>
-                            <span id="shopify-status-msg">Iniciando envio...</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
     </main>
 
     <script>
@@ -975,6 +1266,7 @@
         const errorMsg = document.getElementById('error-msg');
         
         const workspace = document.getElementById('product-workspace');
+        const countrySelect = document.getElementById('country-select');
         
         // Form controls for editing
         const editTitle = document.getElementById('edit-title');
@@ -1020,12 +1312,19 @@
             btn.addEventListener('click', () => {
                 // Deactivate all
                 document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => {
+                    c.classList.remove('active');
+                    c.style.display = 'none';
+                });
                 
                 // Activate clicked
                 btn.classList.add('active');
                 const tabId = btn.dataset.tab;
-                document.getElementById(tabId).classList.add('active');
+                const activeContent = document.getElementById(tabId);
+                activeContent.style.display = 'block';
+                // Force reflow
+                activeContent.offsetHeight;
+                activeContent.classList.add('active');
             });
         });
 
@@ -1209,20 +1508,67 @@
             shopifyStatusBox.className = 'shopify-status-box';
             shopifyStatusMsg.textContent = '';
 
+            // Control and reset dynamic loader steps
+            const stepConnect = document.getElementById('step-connect');
+            const stepScrape = document.getElementById('step-scrape');
+            const stepAi = document.getElementById('step-ai');
+            
+            stepConnect.className = 'step-item active';
+            stepConnect.querySelector('i').className = 'fa-solid fa-circle-notch fa-spin';
+            stepScrape.className = 'step-item';
+            stepScrape.querySelector('i').className = 'fa-solid fa-circle';
+            stepAi.className = 'step-item';
+            stepAi.querySelector('i').className = 'fa-solid fa-circle';
+
+            let stepTimer1 = setTimeout(() => {
+                stepConnect.className = 'step-item completed';
+                stepConnect.querySelector('i').className = 'fa-solid fa-circle-check';
+                stepScrape.className = 'step-item active';
+                stepScrape.querySelector('i').className = 'fa-solid fa-circle-notch fa-spin';
+            }, 3000);
+
+            let stepTimer2 = setTimeout(() => {
+                stepScrape.className = 'step-item completed';
+                stepScrape.querySelector('i').className = 'fa-solid fa-circle-check';
+                stepAi.className = 'step-item active';
+                stepAi.querySelector('i').className = 'fa-solid fa-circle-notch fa-spin';
+            }, 7000);
+
             try {
                 const res = await fetch(`${BASE_URL}/extrair`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         url: url,
-                        creative_video_url: creativeVideoUrlInput.value.trim() || null
+                        creative_video_url: creativeVideoUrlInput.value.trim() || null,
+                        country: countrySelect.value
                     })
                 });
 
                 const data = await res.json();
                 if (!res.ok) {
-                    throw new Error(data.detail || 'Falha ao processar a extração.');
+                    let errMsg = 'Falha ao processar a extração.';
+                    if (data && data.detail) {
+                        if (typeof data.detail === 'string') {
+                            errMsg = data.detail;
+                        } else if (Array.isArray(data.detail)) {
+                            errMsg = data.detail.map(err => `${err.loc.join('.')}: ${err.msg}`).join(' | ');
+                        } else {
+                            errMsg = JSON.stringify(data.detail);
+                        }
+                    }
+                    throw new Error(errMsg);
                 }
+
+                // Complete all steps
+                clearTimeout(stepTimer1);
+                clearTimeout(stepTimer2);
+                stepConnect.className = 'step-item completed';
+                stepConnect.querySelector('i').className = 'fa-solid fa-circle-check';
+                stepScrape.className = 'step-item completed';
+                stepScrape.querySelector('i').className = 'fa-solid fa-circle-check';
+                stepAi.className = 'step-item completed';
+                stepAi.querySelector('i').className = 'fa-solid fa-circle-check';
 
                 currentProductData = data.produto;
 
@@ -1259,8 +1605,20 @@
                 document.querySelector('.tab-button[data-tab="tab-geral"]').click();
 
             } catch (err) {
+                clearTimeout(stepTimer1);
+                clearTimeout(stepTimer2);
                 console.error(err);
-                errorMsg.textContent = err.message || 'Ocorreu um erro ao extrair o produto.';
+                
+                let displayMsg = 'Ocorreu um erro ao extrair o produto.';
+                if (err && err.message) {
+                    displayMsg = err.message;
+                } else if (typeof err === 'string') {
+                    displayMsg = err;
+                } else if (err && typeof err === 'object') {
+                    displayMsg = JSON.stringify(err);
+                }
+                
+                errorMsg.textContent = displayMsg;
                 errorBox.style.display = 'flex';
             } finally {
                 loader.style.display = 'none';
@@ -1305,7 +1663,7 @@
                     description_html: finalCopyHtml
                 };
 
-                const response = await fetch(`${BASE_URL}/enviar-shopify`, {
+                const response = await fetch(`${BASE_URL}/enviar-shopify?country=${countrySelect.value}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(compiledProduct)
@@ -1333,12 +1691,212 @@
 
         // Initialize status config check from local env variables
         const checkShopifyConfigWidget = () => {
-            // Simple mockup validation since keys are read securely on the backend .env
-            // We assume backend connectivity. In production, this can call a status endpoint.
             shopifyStatusWidget.className = 'widget-status';
             shopifyStatusText.textContent = 'Conectado';
         };
         checkShopifyConfigWidget();
+
+        // --- BULK IMPORT LOGIC ---
+        const navSingleImport = document.getElementById('nav-single-import');
+        const navBulkImport = document.getElementById('nav-bulk-import');
+        const navSettings = document.getElementById('nav-settings');
+        const viewSingleImport = document.getElementById('view-single-import');
+        const viewBulkImport = document.getElementById('view-bulk-import');
+
+        // Sidebar Navigation Switcher
+        navSingleImport.addEventListener('click', (e) => {
+            e.preventDefault();
+            navSingleImport.classList.add('active');
+            navBulkImport.classList.remove('active');
+            navSettings.classList.remove('active');
+            viewSingleImport.style.display = 'flex';
+            viewBulkImport.style.display = 'none';
+        });
+
+        navBulkImport.addEventListener('click', (e) => {
+            e.preventDefault();
+            navBulkImport.classList.add('active');
+            navSingleImport.classList.remove('active');
+            navSettings.classList.remove('active');
+            viewSingleImport.style.display = 'none';
+            viewBulkImport.style.display = 'flex';
+        });
+
+        navSettings.addEventListener('click', (e) => {
+            e.preventDefault();
+            alert('Configurações são gerenciadas pelo arquivo .env no servidor.');
+        });
+
+        // Bulk UI references
+        const bulkUrls = document.getElementById('bulk-urls');
+        const bulkAutoUpload = document.getElementById('bulk-auto-upload');
+        const bulkStartBtn = document.getElementById('bulk-start-btn');
+        const bulkProgressCard = document.getElementById('bulk-progress-card');
+        const bulkProgressTitle = document.getElementById('bulk-progress-title');
+        const bulkProgressPct = document.getElementById('bulk-progress-pct');
+        const bulkProgressBar = document.getElementById('bulk-progress-bar');
+        const bulkSuccessCount = document.getElementById('bulk-success-count');
+        const bulkFailCount = document.getElementById('bulk-fail-count');
+        const bulkTableBody = document.getElementById('bulk-table-body');
+
+        bulkStartBtn.addEventListener('click', async () => {
+            const urlsRaw = bulkUrls.value.split('\n');
+            const urls = urlsRaw.map(u => u.trim()).filter(u => u.length > 0);
+
+            if (urls.length === 0) {
+                alert('Por favor, insira pelo menos uma URL de produto válida.');
+                return;
+            }
+
+            // Reset dashboard state
+            bulkSuccessCount.textContent = '0';
+            bulkFailCount.textContent = '0';
+            bulkProgressTitle.textContent = `Progresso: 0 / ${urls.length} Processados`;
+            bulkProgressPct.textContent = '0%';
+            bulkProgressBar.style.width = '0%';
+            bulkTableBody.innerHTML = '';
+            bulkProgressCard.style.display = 'flex';
+
+            // Disable controls
+            bulkUrls.disabled = true;
+            bulkStartBtn.disabled = true;
+            bulkStartBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Processando...';
+
+            let successes = 0;
+            let failures = 0;
+
+            // Build dynamic row entries in table
+            const rowsRefs = [];
+            urls.forEach((url, idx) => {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid var(--border-color)';
+                tr.style.transition = 'background 0.3s ease';
+                tr.innerHTML = `
+                    <td style="padding: 1rem 1.25rem; color: var(--text-muted); font-weight: 500;">${idx + 1}</td>
+                    <td style="padding: 1rem 1.25rem; font-family: monospace; font-size: 0.8rem; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="${url}" target="_blank" style="color: var(--accent-secondary); text-decoration: none;">${url}</a>
+                    </td>
+                    <td class="bulk-prod-title" style="padding: 1rem 1.25rem; color: var(--text-secondary); font-style: italic;">Aguardando...</td>
+                    <td class="bulk-prod-status" style="padding: 1rem 1.25rem;">
+                        <span class="badge" style="background: rgba(255,255,255,0.03); color: var(--text-muted); padding: 4px 8px; border-radius: 6px; font-size: 0.8rem;">Pendente</span>
+                    </td>
+                    <td class="bulk-prod-action" style="padding: 1rem 1.25rem; text-align: right; font-weight: 600;">-</td>
+                `;
+                bulkTableBody.appendChild(tr);
+                rowsRefs.push({
+                    row: tr,
+                    titleCell: tr.querySelector('.bulk-prod-title'),
+                    statusCell: tr.querySelector('.bulk-prod-status'),
+                    actionCell: tr.querySelector('.bulk-prod-action')
+                });
+            });
+
+            // Sequential async loop to prevent local RAM issues
+            for (let i = 0; i < urls.length; i++) {
+                const url = urls[i];
+                const refs = rowsRefs[i];
+                refs.row.style.background = 'rgba(255, 255, 255, 0.015)';
+
+                try {
+                    // Step 1: Extract
+                    refs.statusCell.innerHTML = `
+                        <span class="badge" style="background: rgba(34, 211, 238, 0.1); color: var(--accent-secondary); padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i> Extraindo...
+                        </span>
+                    `;
+
+                    const extResponse = await fetch(`${BASE_URL}/extrair`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            url: url,
+                            country: countrySelect.value
+                        })
+                    });
+
+                    const extData = await extResponse.json();
+                    if (!extResponse.ok) {
+                        throw new Error(extData.detail || 'Falha na extração de dados.');
+                    }
+
+                    const produto = extData.produto;
+                    refs.titleCell.textContent = produto.title;
+                    refs.titleCell.style.fontStyle = 'normal';
+                    refs.titleCell.style.color = 'var(--text-main)';
+
+                    // Step 2: Upload to Shopify if auto-upload is checked
+                    if (bulkAutoUpload.checked) {
+                        refs.statusCell.innerHTML = `
+                            <span class="badge" style="background: rgba(167, 139, 250, 0.1); color: var(--accent-primary); padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px;">
+                                <i class="fa-solid fa-circle-notch fa-spin"></i> Enviando...
+                            </span>
+                        `;
+
+                        const shopResponse = await fetch(`${BASE_URL}/enviar-shopify?country=${countrySelect.value}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(produto)
+                        });
+
+                        const shopData = await shopResponse.json();
+                        if (!shopResponse.ok) {
+                            throw new Error(shopData.detail || 'Falha no envio para o Shopify.');
+                        }
+
+                        // Success status
+                        refs.statusCell.innerHTML = `
+                            <span class="badge" style="background: rgba(52, 211, 153, 0.1); color: var(--accent-success); padding: 4px 8px; border-radius: 6px; font-size: 0.8rem;">
+                                <i class="fa-solid fa-circle-check"></i> Importado
+                            </span>
+                        `;
+                        refs.actionCell.innerHTML = `
+                            <a href="${shopData.admin_url}" target="_blank" rel="noopener noreferrer" style="color: var(--accent-success); text-decoration: underline; display: inline-flex; align-items: center; gap: 4px;">
+                                Ver Admin <i class="fa-solid fa-up-right-from-square" style="font-size: 0.75rem;"></i>
+                            </a>
+                        `;
+                    } else {
+                        // Success extraction only
+                        refs.statusCell.innerHTML = `
+                            <span class="badge" style="background: rgba(52, 211, 153, 0.1); color: var(--accent-success); padding: 4px 8px; border-radius: 6px; font-size: 0.8rem;">
+                                <i class="fa-solid fa-circle-check"></i> Extraído
+                            </span>
+                        `;
+                        refs.actionCell.textContent = 'Pronto';
+                    }
+
+                    successes++;
+                    bulkSuccessCount.textContent = successes;
+
+                } catch (err) {
+                    console.error(err);
+                    const errMsg = err.message || 'Erro desconhecido.';
+                    
+                    refs.statusCell.innerHTML = `
+                        <span class="badge" style="background: rgba(239, 68, 68, 0.1); color: #f87171; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; cursor: help;" title="${errMsg}">
+                            <i class="fa-solid fa-circle-exmark"></i> Falha
+                        </span>
+                    `;
+                    refs.actionCell.innerHTML = `<span style="color: #ef4444; font-size: 0.78rem;" title="${errMsg}">Erro</span>`;
+                    failures++;
+                    bulkFailCount.textContent = failures;
+                }
+
+                // Update row bg
+                refs.row.style.background = 'transparent';
+
+                // Update general progress bar
+                const processed = i + 1;
+                const pct = Math.round((processed / urls.length) * 100);
+                bulkProgressTitle.textContent = `Progresso: ${processed} / ${urls.length} Processados`;
+                bulkProgressPct.textContent = `${pct}%`;
+                bulkProgressBar.style.width = `${pct}%`;
+            }
+
+            // Restore controls
+            bulkUrls.disabled = false;
+            bulkStartBtn.disabled = false;
+            bulkStartBtn.innerHTML = '<i class="fa-solid fa-play"></i> <span>Iniciar Importação em Lote</span>';
+        });
     </script>
 </body>
 </html>

@@ -19,8 +19,14 @@ async def test_all():
 
     print("==================================================")
     print("Testando enviar_shopify...")
-    # Configura variáveis de ambiente mockadas para o teste
+    # Configura variáveis de ambiente mockadas para o teste, limpando as específicas do país para não ler o .env real
     with patch.dict('os.environ', {
+        'SHOPIFY_SHOP_NAME_COLOMBIA': '',
+        'SHOPIFY_ACCESS_TOKEN_COLOMBIA': '',
+        'SHOPIFY_CLIENT_ID_COLOMBIA': '',
+        'SHOPIFY_SHOP_NAME_ROMANIA': '',
+        'SHOPIFY_ACCESS_TOKEN_ROMANIA': '',
+        'SHOPIFY_CLIENT_ID_ROMANIA': '',
         'SHOPIFY_SHOP_NAME': 'loja-teste',
         'SHOPIFY_ACCESS_TOKEN': 'shpat_token_teste_123'
     }):
@@ -45,17 +51,18 @@ async def test_all():
             assert res["product_id"] == 123456789, "ID do produto incorreto"
             assert "loja-teste" in res["admin_url"], "URL de admin incorreta"
             
-            # Verifica se os parâmetros de chamada para post estão corretos
-            mock_post.assert_called_once()
-            called_url = mock_post.call_args[0][0]
-            called_headers = mock_post.call_args[1]['headers']
-            called_json = mock_post.call_args[1]['json']
+            # Verifica se os parâmetros de chamada para post estão corretos (o primeiro cria o produto, os outros sobem as imagens)
+            assert mock_post.call_count == 4, f"Esperado 4 chamadas de POST, obtido {mock_post.call_count}"
+            first_call_args = mock_post.call_args_list[0]
+            called_url = first_call_args[0][0]
+            called_headers = first_call_args[1]['headers']
+            called_json = first_call_args[1]['json']
             
             assert "loja-teste.myshopify.com/admin/api/2026-04/products.json" in called_url, "URL de API incorreta"
             assert called_headers["X-Shopify-Access-Token"] == "shpat_token_teste_123", "Token de acesso incorreto"
             assert called_json["product"]["title"] == "Sapato Moderno e Elegante", "Título incorreto no JSON de envio"
             assert called_json["product"]["handle"] == "sapato-moderno", "Handle incorreto no JSON de envio"
-            assert called_json["product"]["status"] == "draft", "Status não é draft"
+            assert called_json["product"]["status"] == "active", "Status não é active"
             assert "sapato.gif" in called_json["product"]["body_html"], "Description HTML (GIF) ausente no envio Shopify"
             
             # Verifica se o PUT foi chamado

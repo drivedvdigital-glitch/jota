@@ -7,3 +7,5 @@ python-dotenv
 requests
 pillow
 beautifulsoup4
+opencv-python-headless
+numpy

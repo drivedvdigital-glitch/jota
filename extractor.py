@@ -36,12 +36,12 @@ else:
 
 # 1. O Molde (Schema) que a IA é obrigada a seguir (sem as imagens, que vêm do Playwright)
 class ProdutoExtraido(BaseModel):
-    title: str = Field(description="Título corto y directo del producto en español de Colombia (máximo 40 caracteres).")
-    handle: str = Field(description="Identificador de URL (handle/slug) extremadamente corto en español, compuesto por 2 o máximo 3 palabras clave del producto, separadas por guiones (ej: 'proyector-mini', 'depilador-laser'). No incluya artículos, preposiciones ni caracteres especiales.")
-    seo_description: str = Field(description="Descripción corta optimizada para SEO en español de Colombia (máximo 90 caracteres).")
+    title: str = Field(description="Título corto y directo del producto en el idioma de destino requerido (máximo 40 caracteres). Debe cumplir con las políticas de Google Ads: use capitalización estándar (Title Case o Sentence Case), no use mayúsculas sostenidas (ALL CAPS), no incluya emojis ni símbolos de ningún tipo (como ✅, 🚨, ⭐, ®, ™), y no contenga términos promocionales (como 'gratis', 'descuento', 'oferta', 'envío gratis').")
+    handle: str = Field(description="Identificador de URL (handle/slug) extremadamente corto, compuesto por 2 o máximo 3 palabras clave del producto, separadas por guiones (ej: 'proyector-mini', 'depilador-laser'). No incluya artículos, preposiciones ni caracteres especiales.")
+    seo_description: str = Field(description="Descripción corta optimizada para SEO en el idioma de destino requerido (máximo 90 caracteres).")
     price: str = Field(description="Precio del producto extraído tal como aparece escrito en la página original (ej: 'COP 60.000', 'R$ 199,90', etc.). No realice conversiones ni cálculos de moneda.")
-    features: List[str] = Field(description="Lista con 3 a 5 beneficios principales del producto.")
-    description_html: str = Field(description="HTML enriquecido y estructurado en español de Colombia. Debe seguir estrictamente la secuencia de alternancia obligatoria de 9 bloques separados: 1) TEXTO de Introducción persuasiva; 2) <img> (GIF o primera imagen de la galería); 3) TEXTO de Beneficio 1; 4) <img> (segunda imagen de la galería); 5) TEXTO de Beneficio 2; 6) <img> (tercera imagen de la galería); 7) TEXTO de Beneficio 3; 8) <img> (cuarta imagen de la galería); 9) TEXTO de Conclusión persuasiva. Las imágenes deben tener urls válidas del parámetro 'Imagens da Galeria'.")
+    features: List[str] = Field(description="Lista con 3 a 5 beneficios principales del producto en el idioma de destino requerido.")
+    description_html: str = Field(description="El HTML de la descripción en el idioma de destino requerido. Si se detectó descripción original del competidor (modo traducción), devuelva exactamente ese mismo HTML conservando toda su estructura de maquetación original, divs, contenedores, clases, estilos en línea, imágenes, GIFs y formato intactos, traduciendo únicamente el texto visible al idioma de destino sin inventar o agregar textos nuevos. Si no hay descripción (modo creación), construya un diseño de 9 bloques alternados (texto e imágenes) en el idioma de destino requerido.")
 
 # O modelo completo final que junta os dados estruturados da IA com as imagens do Playwright
 class ProdutoCompleto(ProdutoExtraido):
@@ -85,32 +85,69 @@ async def scrape_page_content(url: str) -> Dict[str, Any]:
             
             # Extrai o HTML da descrição rica e limpa metadados e classes indesejadas
             desc_html = await page.evaluate("""() => {
-                const selectors = [
+                let parts = [];
+                
+                // 1. Tenta pegar a descrição principal do produto
+                const mainSelectors = [
                     '.product-description', '.product-single__description', 
                     '#product-description', '.description', '[itemprop="description"]',
-                    '.rte', '.product__description', '.product-details', '.product-tabs__content',
-                    '#description', '.entry-content', '.tab-content'
+                    '.product__description', '.product-details', '#description'
                 ];
-                let rawHtml = '';
-                for (const sel of selectors) {
+                
+                let mainDescEl = null;
+                for (const sel of mainSelectors) {
                     const el = document.querySelector(sel);
-                    if (el) {
-                        const text = el.innerText || '';
-                        if (text.trim().length > 100) {
-                            rawHtml = el.innerHTML;
+                    if (el && el.innerText.trim().length > 30) {
+                        mainDescEl = el;
+                        break;
+                    }
+                }
+                
+                // Se não achou nenhum container de descrição específico, tenta o primeiro .rte que esteja fora de cabeçalho/rodapé
+                if (!mainDescEl) {
+                    const rtes = Array.from(document.querySelectorAll('.rte'));
+                    for (const el of rtes) {
+                        if (el.innerText.trim().length > 50 && !el.closest('footer') && !el.closest('header')) {
+                            mainDescEl = el;
                             break;
                         }
                     }
                 }
                 
-                if (!rawHtml) return '';
+                if (mainDescEl) {
+                    parts.push(mainDescEl.outerHTML);
+                }
+                
+                // 2. Busca por seções de conteúdo do tema Dawn / Shopify OS 2.0 que compõem a copy
+                const mainContent = document.getElementById('MainContent') || document.querySelector('main');
+                if (mainContent) {
+                    const sections = mainContent.querySelectorAll('.image-with-text, .rich-text, .multicolumn, .custom-html, .video-section');
+                    sections.forEach(sec => {
+                        // Evita duplicar se a seção estiver dentro do container principal já extraído
+                        if (mainDescEl && mainDescEl.contains(sec)) {
+                            return;
+                        }
+                        
+                        // Garante que não é um widget de reviews ou recomendados
+                        const secId = sec.id || '';
+                        const secClass = sec.className || '';
+                        if (!secId.includes('review') && !secId.includes('recommend') && 
+                            !secClass.includes('review') && !secClass.includes('recommend')) {
+                            parts.push(sec.outerHTML);
+                        }
+                    });
+                }
+                
+                if (parts.length === 0) return '';
+                
+                const rawHtml = parts.join('\\n');
                 
                 // Limpeza do HTML no contexto do navegador
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(rawHtml, 'text/html');
                 
-                // 1. Remove scripts, estilos, iframes e inputs
-                doc.querySelectorAll('script, style, iframe, input, button, form, noscript').forEach(el => el.remove());
+                // 1. Remove scripts, estilos, iframes, inputs, botões e svgs
+                doc.querySelectorAll('script, style, iframe, input, button, form, noscript, svg').forEach(el => el.remove());
                 
                 // 2. Converte links em spans para desativar redirecionamentos a concorrentes
                 doc.querySelectorAll('a').forEach(a => {
@@ -122,19 +159,27 @@ async def scrape_page_content(url: str) -> Dict[str, Any]:
                     a.parentNode.replaceChild(span, a);
                 });
                 
-                // 3. Remove atributos de dados (data-*), classes e IDs para manter o HTML 100% limpo
+                // 3. Normaliza URLs de imagens que começam com //
+                doc.querySelectorAll('img').forEach(img => {
+                    let src = img.getAttribute('src') || '';
+                    if (src.startsWith('//')) {
+                        img.setAttribute('src', 'https:' + src);
+                    }
+                });
+                
+                // 4. Remove atributos de dados (data-*) e IDs para manter o HTML limpo, mas PRESERVA classes e inline styles para manter o layout original
                 doc.body.querySelectorAll('*').forEach(el => {
                     const attribs = Array.from(el.attributes);
                     attribs.forEach(attr => {
                         const name = attr.name;
-                        if (name.startsWith('data-') || name === 'class' || name === 'id') {
+                        if (name.startsWith('data-') || name === 'id') {
                             el.removeAttribute(name);
                         }
                     });
                     
-                    // 4. Limpeza especial de imagens (mantém apenas src, alt, width, height e style)
+                    // 5. Limpeza especial de imagens (mantém apenas src, alt, width, height, style, class)
                     if (el.tagName.toLowerCase() === 'img') {
-                        const keepAttrs = ['src', 'alt', 'width', 'height', 'style'];
+                        const keepAttrs = ['src', 'alt', 'width', 'height', 'style', 'class'];
                         attribs.forEach(attr => {
                             if (!keepAttrs.includes(attr.name)) {
                                 el.removeAttribute(attr.name);
@@ -163,16 +208,19 @@ async def scrape_page_content(url: str) -> Dict[str, Any]:
                         containers.forEach(container => {
                             const foundImgs = Array.from(container.querySelectorAll('img'));
                             foundImgs.forEach(img => {
-                                const src = img.src || img.dataset.src || img.dataset.lazySrc;
-                                if (src && src.startsWith('http')) {
-                                    const srcLower = src.toLowerCase();
-                                    // Ignora logotipos, ícones de navegação, avatares ou bandeiras de idioma
-                                    if (!srcLower.includes('logo') && 
-                                        !srcLower.includes('icon') && 
-                                        !srcLower.includes('avatar') && 
-                                        !srcLower.includes('flag') && 
-                                        !srcLower.includes('badge')) {
-                                        imgs.push(src);
+                                let src = img.src || img.dataset.src || img.dataset.lazySrc || '';
+                                if (src) {
+                                    if (src.startsWith('//')) src = 'https:' + src;
+                                    if (src.startsWith('http')) {
+                                        const srcLower = src.toLowerCase();
+                                        // Ignora logotipos, ícones de navegação, avatares ou bandeiras de idioma
+                                        if (!srcLower.includes('logo') && 
+                                            !srcLower.includes('icon') && 
+                                            !srcLower.includes('avatar') && 
+                                            !srcLower.includes('flag') && 
+                                            !srcLower.includes('badge')) {
+                                            imgs.push(src);
+                                        }
                                     }
                                 }
                             });
@@ -184,33 +232,42 @@ async def scrape_page_content(url: str) -> Dict[str, Any]:
                 // Se não encontrou nenhuma imagem na galeria estruturada, busca no resto do body
                 if (imgs.length === 0) {
                     imgs = Array.from(document.querySelectorAll('img'))
-                        .filter(img => {
+                        .map(img => {
+                            let src = img.src || img.dataset.src || img.dataset.lazySrc || '';
+                            if (src.startsWith('//')) src = 'https:' + src;
+                            return {
+                                el: img,
+                                src: src
+                            };
+                        })
+                        .filter(item => {
+                            const img = item.el;
                             const w = img.naturalWidth || img.width || 0;
                             const h = img.naturalHeight || img.height || 0;
-                            const src = img.src || '';
-                            const srcLower = src.toLowerCase();
-                            // Filtro restritivo de tamanho e palavras-chave de marcas/elementos de layout
+                            const srcLower = item.src.toLowerCase();
                             return w > 200 && h > 200 && 
                                    !srcLower.includes('logo') && 
                                    !srcLower.includes('icon') && 
                                    !srcLower.includes('avatar') && 
                                    !srcLower.includes('flag') && 
-                                   !srcLower.includes('badge');
+                                   !srcLower.includes('badge') &&
+                                   item.src.startsWith('http');
                         })
-                        .map(img => img.src)
-                        .filter(src => src && src.startsWith('http'));
+                        .map(item => item.src);
                 }
                 
                 // Busca por vídeos HTML5 na página (.mp4 ou .webm)
                 let vids = [];
                 document.querySelectorAll('video').forEach(video => {
-                    const src = video.src || '';
-                    if (src && src.startsWith('http')) {
+                    let src = video.src || '';
+                    if (src.startsWith('//')) src = 'https:' + src;
+                    if (src.startsWith('http')) {
                         vids.push(src);
                     }
                     video.querySelectorAll('source').forEach(source => {
-                        const sSrc = source.src || '';
-                        if (sSrc && sSrc.startsWith('http')) {
+                        let sSrc = source.src || '';
+                        if (sSrc.startsWith('//')) sSrc = 'https:' + sSrc;
+                        if (sSrc.startsWith('http')) {
                             vids.push(sSrc);
                         }
                     });
@@ -218,8 +275,9 @@ async def scrape_page_content(url: str) -> Dict[str, Any]:
                 
                 // Filtra também links de vídeo em classes comuns ou do Shopify
                 document.querySelectorAll('a, [data-video-src], [data-video-url]').forEach(el => {
-                    const src = el.getAttribute('href') || el.getAttribute('data-video-src') || el.getAttribute('data-video-url') || '';
-                    if (src && src.startsWith('http') && src.toLowerCase().includes('.mp4')) {
+                    let src = el.getAttribute('href') || el.getAttribute('data-video-src') || el.getAttribute('data-video-url') || '';
+                    if (src.startsWith('//')) src = 'https:' + src;
+                    if (src.startsWith('http') && src.toLowerCase().includes('.mp4')) {
                         vids.push(src);
                     }
                 });
@@ -379,7 +437,7 @@ def convert_mp4_to_animated_webp(video_path: str, output_path: str, max_duration
         print(f"[convert_mp4_to_animated_webp] Exceção durante a conversão: {e}")
         return False
 
-async def extract_product_data(url: str, creative_video_url: str = None) -> Dict[str, Any]:
+async def extract_product_data(url: str, creative_video_url: str = None, target_language: str = "Espanhol da Colômbia") -> Dict[str, Any]:
     """
     Raspa a página usando o Playwright e envia o conteúdo textual
     para o Gemini 1.5 Pro extrair de forma estruturada.
@@ -466,29 +524,76 @@ async def extract_product_data(url: str, creative_video_url: str = None) -> Dict
         imagens_para_prompt.insert(0, placeholder_url)
         imagens_brutas.insert(0, video_webp_base64)
     
-    # 2. O Prompt de Engenharia com as suas regras de negócio
-    prompt_sistema = f"""
-    Você é um copywriter de e-commerce de elite, especialista em conversão e mineração de produtos.
-    Sua tarefa é analisar o texto bruto de uma página de vendas, seu HTML de descrição e sua lista de imagens, extrair os dados cruciais e TRADUZIR TUDO para o Espanhol da Colômbia.
+    # Detecta se há uma descrição original rica disponível
+    tem_copy_original = False
+    if descricao_html_bruta and len(descricao_html_bruta.strip()) > 200:
+        texto_limpo = re.sub(r'<[^<]+?>', '', descricao_html_bruta).strip()
+        if "<img" in descricao_html_bruta.lower() or len(texto_limpo) > 100:
+            tem_copy_original = True
 
-    REGRAS INEGOCIÁVEIS DE ESTRUTURA E CONTEÚDO:
-    1. O idioma de saída DEVE ser estritamente o Espanhol focado no consumidor da Colômbia. Use tom persuasivo, emocional e focado em benefícios de conversão.
+    if tem_copy_original:
+        print("[EXTRATOR] Detectada descrição rica original. Traduzindo e limpando mantendo a estrutura...")
+        prompt_sistema = f"""
+    Você é um tradutor técnico e copywriter de e-commerce de elite.
+    Sua tarefa é analisar o HTML da descrição original fornecido, traduzir e otimizar todo o conteúdo textual para o {target_language}.
+
+    REGRAS DO TÍTULO DO PRODUTO (COMPATIBILIDADE GOOGLE ADS):
+    1. O título do produto ('title') deve ser conciso (máximo 40 caracteres) e descrever o produto em {target_language}.
+    2. Use capitalização normal (Title Case ou Sentence Case). É PROIBIDO escrever títulos inteiramente em maiúsculas (ALL CAPS), exceto para siglas curtas de até 3 letras.
+    3. É terminantemente PROIBIDO o uso de emojis, exclamações ou símbolos promocionais/comerciais (como ®, ™, ✅, 🚨, ⭐) no título.
+    4. Não inclua termos comerciais ou promocionais como 'gratis', 'descuento', 'oferta', 'envío gratis', 'regalo' no título.
+
+    REGRAS DE OTIMIZAÇÃO E LIMPEZA DE TEXTO:
+    1. Se o texto do HTML original contiver menções a preços do concorrente (ex: "$129.900", "COP 60.000", etc.), remova essas menções a preços e ofertas financeiras específicas.
+    2. Se o texto contiver menções ao nome da loja concorrente original ou links, remova-as e substitua por termos neutros (ex: "nuestra tienda").
+    3. Se houver algum parágrafo ou trecho que esteja completamente desconexo ou falando de outro produto (devido a erros de raspagem), você PODE e DEVE melhorar e reescrever o texto para que condiga perfeitamente com o produto em questão de forma persuasiva.
+    4. PROIBIDO o uso de símbolos de marca registrada. Remova QUALQUER caractere ® ou ™ de todo o texto.
+
+    REGRAS DE ESTRUTURA E FORMATAÇÃO DE TAGS (ESTRUTURA DO CLIENTE):
+    1. Você DEVE MANTER A ESTRUTURA DE LAYOUT ORIGINAL INTEGRALMENTE (contêineres, divs, grids, colunas, imagens, GIFs, larguras, alturas, alinhamentos, fundos de cores, classes e estilos inline idênticos). Não remova as divs ou contêineres de layout.
+    2. Para manter a formatação visual padrão desejada pelo cliente para os textos:
+       - Identifique qualquer frase curta, chamada de atenção, título, subtítulo ou cabeçalho de seção (mesmo que no HTML original esteja dentro de tags <p>, <span>, <div>, <b> ou <strong>) e formate-a obrigatoriamente como: `<h1><strong>[Texto do Título Traduzido]</strong></h1>` (Título 1 em Negrito).
+       - Identifique os parágrafos de descrição ou blocos de texto explicativo que ficam abaixo desses cabeçalhos (mesmo que no HTML original usassem p, div, span, etc.) e formate-os obrigatoriamente como: `<h3>[Texto da Descrição Traduzido]</h3>` (Título 3) e garanta que esses blocos de texto explicativo NÃO possuam nenhuma tag de negrito (como <strong>, <b> ou estilos de negrito inline) envolvendo o texto todo.
+    3. Mantenha os mesmos atributos `src` originais de todas as imagens e GIFs intactos nas tags `<img>`.
+
+    HTML da descrição original para ser traduzido e adaptado:
+    ---
+    {descricao_html_bruta}
+    ---
+
+    Texto bruto complementar para contexto do produto real:
+    ---
+    {texto_pagina}
+    ---
+    """
+    else:
+        print("[EXTRATOR] Nenhuma descrição rica original encontrada. Criando copy de alta conversão do zero...")
+        prompt_sistema = f"""
+    Você é um copywriter de e-commerce de elite, especialista em conversão e mineração de produtos.
+    Sua tarefa é analisar o texto bruto de uma página de vendas, seu HTML de descrição e sua lista de imagens, extrair os dados cruciais e criar uma copy completa em {target_language} do zero.
+
+    REGRAS INEGOCIÁVEIS DE ESTRUTURA E CONTEÚDO (CRIAÇÃO DO ZERO):
+    1. O idioma de saída DEVE ser estritamente o {target_language}. Use tom persuasivo e focado em conversão.
     2. PROIBIDO o uso de símbolos de marca registrada. Remova QUALQUER caractere ® ou ™ de todo o texto gerado.
-    3. O 'title' DEVE ter no máximo 40 caracteres (já em espanhol).
-    4. O 'handle' DEVE ser um identificador de URL extremamente curto, composto por 2 ou no máximo 3 palavras-chave em espanhol, separadas por hífen (ex: 'proyector-mini', 'depilador-laser'). Nunca inclua preposições, artigos nem caracteres especiais.
-    5. A 'seo_description' DEVE ter no máximo 90 caracteres (já em espanhol).
+    3. O 'title' DEVE ter no máximo 40 caracteres (já no idioma de destino). Deve cumprir estritamente as políticas do Google Ads:
+       - Use capitalização normal (Title Case). Nunca use ALL CAPS (letras maiúsculas).
+       - É PROIBIDO o uso de emojis, exclamações ou símbolos promocionais (como ®, ™, ✅, 🚨, ⭐).
+       - Não contemple termos comerciais/promocionais no título (como 'envío gratis', 'descuento', 'oferta', 'regalo').
+
+    4. O 'handle' DEVE ser um identificador de URL extremamente curto, composto por 2 ou no máximo 3 palavras-chave no idioma de destino, separadas por hífen (ex: 'proyector-mini'). Nunca inclua preposições, artigos nem caracteres especiais.
+    5. A 'seo_description' DEVE ter no máximo 90 caracteres (já no idioma de destino).
     6. Limpe qualquer referência ao nome da loja original ou de concorrentes.
     7. No campo 'description_html', você DEVE obrigatoriamente construir um layout de alta conversão estruturando o HTML final para conter exatamente a seguinte ordem estrutural (não use listas simples nem tabelas para o layout principal):
        
-       - BLOCO 1 (TEXTO): Título curto atraente (<h2>) seguido de um parágrafo introdutório persuasivo e conectivo sobre o produto.
+       - BLOCO 1 (TEXTO): Título curto atraente formatado como `<h1><strong>[Título Traduzido]</strong></h1>`, seguido de um parágrafo introdutório persuasivo formatado como `<h3>[Parágrafo Traduzido]</h3>` (sem negrito).
        - BLOCO 2 (GIF/IMG): Uma tag <img src="..." style="max-width:100%; height:auto; display:block; margin: 15px auto; border-radius: 8px;" />. Use de preferência a URL de um GIF animado real da lista de imagens se disponível. Caso contrário, use a primeira imagem da lista.
-       - BLOCO 3 (TEXTO): Subtítulo persuasivo (<h3>) e um parágrafo detalhando o Benefício Principal 1.
+       - BLOCO 3 (TEXTO): Subtítulo persuasivo de benefício formatado como `<h1><strong>[Subtítulo Traduzido]</strong></h1>`, seguido de um parágrafo detalhando o Benefício Principal 1 formatado como `<h3>[Parágrafo Traduzido]</h3>` (sem negrito).
        - BLOCO 4 (IMG): Uma tag <img src="..." style="max-width:100%; height:auto; display:block; margin: 15px auto; border-radius: 8px;" /> contendo a segunda imagem de alta qualidade da galeria.
-       - BLOCO 5 (TEXTO): Subtítulo persuasivo (<h3>) e um parágrafo detalhando o Benefício Principal 2.
+       - BLOCO 5 (TEXTO): Subtítulo persuasivo de benefício formatado como `<h1><strong>[Subtítulo Traduzido]</strong></h1>`, seguido de um parágrafo detalhando o Benefício Principal 2 formatado como `<h3>[Parágrafo Traduzido]</h3>` (sem negrito).
        - BLOCO 6 (IMG): Uma tag <img src="..." style="max-width:100%; height:auto; display:block; margin: 15px auto; border-radius: 8px;" /> contendo a terceira imagem de alta qualidade da galeria.
-       - BLOCO 7 (TEXTO): Subtítulo persuasivo (<h3>) e um parágrafo detalhando o Benefício Principal 3.
+       - BLOCO 7 (TEXTO): Subtítulo persuasivo de benefício formatado como `<h1><strong>[Subtítulo Traduzido]</strong></h1>`, seguido de um parágrafo detalhando o Benefício Principal 3 formatado como `<h3>[Parágrafo Traduzido]</h3>` (sem negrito).
        - BLOCO 8 (IMG): Uma tag <img src="..." style="max-width:100%; height:auto; display:block; margin: 15px auto; border-radius: 8px;" /> contendo a quarta imagem de alta qualidade da galeria.
-       - BLOCO 9 (TEXTO): Parágrafo de Fechamento/Conclusão altamente persuasivo ou oferta sutil de fechamento de venda.
+       - BLOCO 9 (TEXTO): Parágrafo de Fechamento/Conclusão altamente persuasivo ou de oferta sutil formatado como `<h3>[Parágrafo Traduzido]</h3>` (sem negrito).
 
     REGRAS DE IMAGENS:
     - É OBLIGATÓRIO incluir as tags <img> com as URLs originais nas posições 2, 4, 6 e 8 da estrutura do HTML.
@@ -498,11 +603,6 @@ async def extract_product_data(url: str, creative_video_url: str = None) -> Dict
 
     Imagens da Galeria (use-as para preencher/estruturar as tags <img> do description_html conforme as regras acima):
     {imagens_para_prompt}
-
-    HTML da descrição original para tradução:
-    ---
-    {descricao_html_bruta}
-    ---
 
     Texto bruto extraído da página original:
     ---

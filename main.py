@@ -5,6 +5,8 @@ if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 import os
+from dotenv import load_dotenv
+load_dotenv(override=True)
 import re
 import csv
 import io
@@ -40,10 +42,27 @@ app.add_middleware(
 
 
 
+# Configuração multi-países (idiomas e credenciais da Shopify)
+CONFIG_PAISES = {
+    "colombia": {
+        "idioma": "Espanhol da Colômbia (Español de Colombia)",
+        "shop_env": "SHOPIFY_SHOP_NAME_COLOMBIA",
+        "token_env": "SHOPIFY_ACCESS_TOKEN_COLOMBIA",
+        "client_env": "SHOPIFY_CLIENT_ID_COLOMBIA"
+    },
+    "romania": {
+        "idioma": "Romeno (Rumano)",
+        "shop_env": "SHOPIFY_SHOP_NAME_ROMANIA",
+        "token_env": "SHOPIFY_ACCESS_TOKEN_ROMANIA",
+        "client_env": "SHOPIFY_CLIENT_ID_ROMANIA"
+    }
+}
+
 # Modelo de requisição conforme o protótipo
 class RequestExtrair(BaseModel):
     url: str
-    creative_video_url: str = None
+    creative_video_url: str | None = None
+    country: str | None = "colombia"
 
 # Modelo de resposta que encapsula o status e o produto completo
 class ResponseExtrair(BaseModel):
@@ -377,7 +396,11 @@ async def extrair_produto(request: RequestExtrair):
         
     try:
         creative_video = request.creative_video_url.strip() if (request.creative_video_url and request.creative_video_url.strip()) else None
-        dados_produto = await extract_product_data(url, creative_video)
+        country_key = (request.country or "colombia").strip().lower()
+        country_conf = CONFIG_PAISES.get(country_key, CONFIG_PAISES["colombia"])
+        target_lang = country_conf["idioma"]
+        
+        dados_produto = await extract_product_data(url, creative_video, target_lang)
         return {
             "status": "sucesso",
             "produto": dados_produto
@@ -389,13 +412,25 @@ async def extrair_produto(request: RequestExtrair):
 
 
 @app.post("/enviar-shopify")
-async def enviar_shopify(produto: ProdutoCompleto):
+async def enviar_shopify(produto: ProdutoCompleto, country: str = "colombia"):
     """
-    Conecta na Admin API da Shopify e cria o produto diretamente como rascunho.
+    Conecta na Admin API da Shopify e cria o produto diretamente.
     """
-    shop_name = os.getenv("SHOPIFY_SHOP_NAME")
-    access_token = os.getenv("SHOPIFY_ACCESS_TOKEN")
-    client_id = os.getenv("SHOPIFY_CLIENT_ID")
+    country_key = country.strip().lower()
+    country_conf = CONFIG_PAISES.get(country_key, CONFIG_PAISES["colombia"])
+    
+    # Busca chaves específicas do país
+    shop_name = os.getenv(country_conf["shop_env"])
+    access_token = os.getenv(country_conf["token_env"])
+    client_id = os.getenv(country_conf["client_env"])
+    
+    # Fallback para chaves genéricas legadas para compatibilidade retroativa
+    if not shop_name or shop_name.strip() == "":
+        shop_name = os.getenv("SHOPIFY_SHOP_NAME")
+    if not access_token or access_token.strip() == "":
+        access_token = os.getenv("SHOPIFY_ACCESS_TOKEN")
+    if not client_id or client_id.strip() == "":
+        client_id = os.getenv("SHOPIFY_CLIENT_ID")
     
     # Validações das chaves do .env
     if not shop_name or shop_name in ["sua-loja-shopify-slug", ""]:
@@ -463,6 +498,31 @@ async def enviar_shopify(produto: ProdutoCompleto):
                         detail=f"Resposta da Shopify não contém o access_token: {token_response.text}"
                     )
             else:
+                error_text = token_response.text
+                if "application_cannot_be_found" in error_text:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            f"Erro na Shopify (application_cannot_be_found): O app com a Chave de API '{client_id}' "
+                            f"não foi instalado ou não foi encontrado na loja '{shop_name}'.\n\n"
+                            "Para corrigir isso, você tem duas opções:\n\n"
+                            "Opção 1: Instalar o app do Shopify Partners na loja da Romênia\n"
+                            "1. No painel de Parceiro do Shopify (Partners Dashboard), vá em 'Apps' e clique no seu aplicativo (EKopy APP).\n"
+                            "2. Vá em 'Distribution' (Distribuição) no menu lateral.\n"
+                            "3. Escolha 'Custom distribution' (Distribuição personalizada).\n"
+                            "4. Digite o domínio completo da sua loja da Romênia (hnhrrf-hm.myshopify.com).\n"
+                            "5. Gere o link de instalação, abra-o em outra aba (no mesmo navegador onde você está logado na loja da Romênia) e clique em 'Instalar'.\n\n"
+                            "Opção 2 (Recomendada - Mais Simples): Usar um Token de Acesso direto (shpat_...)\n"
+                            "1. Acesse o admin da sua loja da Romênia (https://admin.shopify.com/store/hnhrrf-hm).\n"
+                            "2. Vá em Configurações > Apps e canais de vendas > Desenvolver apps.\n"
+                            "3. Clique em 'Criar um app', configure os escopos da API Admin (write_products, write_files, read_products, read_files).\n"
+                            "4. Instale o app e copie o token que começa com 'shpat_' (revelado apenas uma vez).\n"
+                            "5. Abra o arquivo '.env' e altere a linha:\n"
+                            "   SHOPIFY_ACCESS_TOKEN_ROMANIA=[cole seu token shpat_ aqui]\n"
+                            "6. Apague o valor ou comente a linha 'SHOPIFY_CLIENT_ID_ROMANIA' no '.env'.\n"
+                            "Dessa forma, o sistema se conectará diretamente sem precisar do fluxo Partner OAuth!"
+                        )
+                    )
                 raise HTTPException(
                     status_code=400,
                     detail=f"Falha na autenticação OAuth da Shopify (Código {token_response.status_code}): {token_response.text}"
@@ -470,6 +530,25 @@ async def enviar_shopify(produto: ProdutoCompleto):
     
     # Processa as imagens da galeria de forma paralela assíncrona com conversão para WebP/GIF e limpeza de metadados
     
+    # Extrai imagens adicionais do description_html para que também sejam enviadas ao Shopify, limpas e mapeadas
+    imagens_extras = []
+    body_html_inicial = produto.description_html
+    if body_html_inicial:
+        try:
+            soup_imgs = BeautifulSoup(body_html_inicial, 'html.parser')
+            for img_tag in soup_imgs.find_all('img'):
+                src = img_tag.get('src', '').strip()
+                if src:
+                    if (src.startswith('http') or src.startswith('data:image/')) and src not in produto.images and src not in imagens_extras:
+                        imagens_extras.append(src)
+        except Exception as e_extra_parse:
+            print(f"[SHOPIFY UPLOAD] Erro ao extrair imagens adicionais do HTML: {e_extra_parse}")
+
+    todas_imagens_para_enviar = list(produto.images)
+    for img_extra in imagens_extras:
+        if img_extra not in todas_imagens_para_enviar:
+            todas_imagens_para_enviar.append(img_extra)
+            
     async def processar_e_codificar_imagem_galeria(img_data, idx):
         try:
             loop = asyncio.get_event_loop()
@@ -487,7 +566,7 @@ async def enviar_shopify(produto: ProdutoCompleto):
                 if res.status_code != 200:
                     raise Exception(f"Erro HTTP {res.status_code}")
                 conteudo = res.content
-                eh_gif = img_data.lower().endswith('.gif')
+                eh_gif = img_data.lower().split('?')[0].endswith('.gif') or 'gif' in img_data.lower()
                 
             binario, mime_type, ext, is_animated = await loop.run_in_executor(
                 None, 
@@ -497,14 +576,15 @@ async def enviar_shopify(produto: ProdutoCompleto):
             )
             
             if binario:
-                filename = f"galeria_{idx}_{int(time.time())}.{ext}"
+                filename = f"clean_galeria_{idx}_{int(time.time())}.{ext}"
                 base64_data = base64.b64encode(binario).decode('utf-8')
                 return {
                     "attachment": base64_data,
                     "filename": filename,
                     "alt": f"{produto.title} - Imagen {idx}",
                     "is_gif": is_animated,
-                    "original_idx": idx
+                    "original_idx": idx,
+                    "original_url": img_data
                 }
         except Exception as e:
             print(f"[ERRO galeria imagem {idx}] {e}")
@@ -514,12 +594,13 @@ async def enviar_shopify(produto: ProdutoCompleto):
             return {
                 "src": img_data,
                 "alt": f"{produto.title} - Imagen {idx}",
-                "is_gif": img_data.lower().endswith('.gif'),
-                "original_idx": idx
+                "is_gif": img_data.lower().split('?')[0].endswith('.gif') or 'gif' in img_data.lower(),
+                "original_idx": idx,
+                "original_url": img_data
             }
         return None
 
-    galeria_tasks = [processar_e_codificar_imagem_galeria(img, idx) for idx, img in enumerate(produto.images, start=1)]
+    galeria_tasks = [processar_e_codificar_imagem_galeria(img, idx) for idx, img in enumerate(todas_imagens_para_enviar, start=1)]
     resultados = await asyncio.gather(*galeria_tasks)
     
     shopify_images_payload = []
@@ -530,7 +611,8 @@ async def enviar_shopify(produto: ProdutoCompleto):
             imagens_enviadas_meta.append({
                 "original_idx": img_res.get("original_idx"),
                 "is_gif": img_res.get("is_gif", False),
-                "position_enviada": pos
+                "position_enviada": pos,
+                "original_url": img_res.get("original_url")
             })
             pos += 1
             # Mantém apenas chaves válidas para a criação REST do Shopify
@@ -567,7 +649,7 @@ async def enviar_shopify(produto: ProdutoCompleto):
     handle_cleaned = slugify(produto.handle) if (hasattr(produto, "handle") and produto.handle) else slugify(produto.title)
     print(f"[SHOPIFY UPLOAD] Handle sanitizado para envio: {handle_cleaned}")
     
-    # Payload para a API Admin REST da Shopify
+    # Payload para a API Admin REST da Shopify (inicia sem imagens para evitar erro 413)
     product_payload = {
         "product": {
             "title": produto.title,
@@ -575,8 +657,8 @@ async def enviar_shopify(produto: ProdutoCompleto):
             "body_html": body_html,
             "vendor": "Ofertas Colombianas",
             "product_type": "Otro",
-            "status": "draft",  # Cria como rascunho
-            "images": shopify_images_payload,
+            "status": "active",  # Cria como ativo
+            "images": [],
             "variants": [
                 {
                     "price": price_cleaned,
@@ -615,62 +697,99 @@ async def enviar_shopify(produto: ProdutoCompleto):
         if response.status_code == 201:
             res_data = response.json()
             product_id = res_data["product"]["id"]
-            shopify_created_images = res_data["product"].get("images", [])
             
-            # Reconstrói e mapeia as URLs da CDN do Shopify geradas
+            # Upload das imagens uma a uma para evitar erro 413 (Payload Too Large)
             mapa_urls_cdn = {}
-            gif_cdn_url = None
-            
-            for meta in imagens_enviadas_meta:
-                idx_enviado = meta["position_enviada"] - 1
-                if idx_enviado < len(shopify_created_images):
-                    cdn_url = shopify_created_images[idx_enviado]["src"]
-                    mapa_urls_cdn[meta["original_idx"]] = cdn_url
-                    if meta["is_gif"] and not gif_cdn_url:
-                        gif_cdn_url = cdn_url
+            for img_res in resultados:
+                if img_res is None:
+                    continue
+                    
+                upload_img_url = f"https://{shop_name}.myshopify.com/admin/api/2026-04/products/{product_id}/images.json"
+                
+                # Prepara o payload para upload individual contendo apenas chaves válidas do Shopify
+                img_payload = {k: v for k, v in img_res.items() if k in ["attachment", "filename", "alt", "src"]}
+                single_payload = {
+                    "image": img_payload
+                }
+                
+                max_img_retries = 3
+                img_response = None
+                for attempt in range(1, max_img_retries + 1):
+                    try:
+                        def upload_call():
+                            return requests.post(upload_img_url, json=single_payload, headers=headers, timeout=25)
+                        img_response = await loop.run_in_executor(None, upload_call)
+                        if img_response.status_code in (200, 201):
+                            break
+                    except Exception as e_img:
+                        print(f"[IMAGE UPLOAD] Tentativa {attempt} falhou para imagem {img_res.get('filename')}: {e_img}")
+                    await asyncio.sleep(1)
+                
+                if img_response is not None and img_response.status_code in (200, 201):
+                    uploaded_img_data = img_response.json().get("image")
+                    if uploaded_img_data:
+                        cdn_url = uploaded_img_data.get("src")
+                        original_url = img_res.get("original_url")
+                        if original_url and cdn_url:
+                            mapa_urls_cdn[original_url] = cdn_url
+                        print(f"[IMAGE UPLOAD] Imagem {img_res.get('filename')} enviada e mapeada com sucesso: {cdn_url}")
+                else:
+                    status_code = img_response.status_code if img_response else "N/A"
+                    text_err = img_response.text if img_response else "Sem resposta"
+                    print(f"[IMAGE UPLOAD] Erro ao enviar imagem {img_res.get('filename')}: Código {status_code} - {text_err}")
                         
-            # Se houver body_html, substituímos as imagens internas pelos links definitivos do CDN do cliente
+            # Se houver body_html, substituímos as imagens internas pelos links definitivos do CDN do cliente baseando-se nas URLs originais
             if produto.description_html:
                 soup = BeautifulSoup(produto.description_html, 'html.parser')
                 img_tags = soup.find_all('img')
-                if img_tags:
-                    # 1ª imagem da copy -> se for GIF, usa o GIF. Senão usa a 1ª imagem da galeria.
-                    if gif_cdn_url:
-                        img_tags[0]['src'] = gif_cdn_url
-                        print(f"[COPY UPDATE] 1ª imagem da copy substituída pelo GIF do CDN: {gif_cdn_url}")
-                    elif 1 in mapa_urls_cdn:
-                        img_tags[0]['src'] = mapa_urls_cdn[1]
-                        print(f"[COPY UPDATE] 1ª imagem da copy substituída pela imagem 1 do CDN: {mapa_urls_cdn[1]}")
+                for img_tag in img_tags:
+                    src = img_tag.get('src', '').strip()
+                    if not src:
+                        continue
                         
-                    # Outras imagens da copy (2ª, 3ª, 4ª...) correspondem sequencialmente à galeria (original_idx = 2, 3, 4...)
-                    for img_pos_copy in range(1, len(img_tags)):
-                        galeria_idx = img_pos_copy + 1
-                        if galeria_idx in mapa_urls_cdn:
-                            img_tags[img_pos_copy]['src'] = mapa_urls_cdn[galeria_idx]
-                            print(f"[COPY UPDATE] Imagem {img_pos_copy+1} da copy substituída por imagem {galeria_idx} do CDN: {mapa_urls_cdn[galeria_idx]}")
-                            
-                    body_html_final = str(soup)
-                    
-                    # Atualiza o produto via chamada PUT REST rápida para salvar a copy otimizada com imagens hospedadas
-                    put_url = f"https://{shop_name}.myshopify.com/admin/api/2026-04/products/{product_id}.json"
-                    put_payload = {
-                        "product": {
-                            "id": product_id,
-                            "handle": handle_cleaned,
-                            "body_html": body_html_final
-                        }
+                    # 1. Tenta correspondência exata de URL
+                    if src in mapa_urls_cdn:
+                        img_tag['src'] = mapa_urls_cdn[src]
+                        print(f"[COPY UPDATE] Imagem substituída por correspondência exata: {src} -> {mapa_urls_cdn[src]}")
+                    else:
+                        # 2. Tenta correspondência parcial (removendo query parameters)
+                        src_clean = src.split('?')[0]
+                        for orig_url, cdn_url in mapa_urls_cdn.items():
+                            if orig_url.split('?')[0] == src_clean:
+                                img_tag['src'] = cdn_url
+                                print(f"[COPY UPDATE] Imagem substituída por correspondência parcial: {src} -> {cdn_url}")
+                                break
+                                
+                # Fail-safe: remove qualquer imagem base64 restante para evitar erro 413 no PUT
+                for img_tag in soup.find_all('img'):
+                    src = img_tag.get('src', '').strip()
+                    if src.startswith('data:image/'):
+                        print(f"[COPY FAIL-SAFE] Removendo tag de imagem base64 não mapeada para evitar erro 413: {src[:50]}...")
+                        img_tag.decompose()
+                        
+                # Sempre reconstrói o HTML final, preservando o layout original
+                body_html_final = str(soup)
+                
+                # Atualiza o produto via chamada PUT REST rápida para salvar a copy otimizada com imagens hospedadas
+                put_url = f"https://{shop_name}.myshopify.com/admin/api/2026-04/products/{product_id}.json"
+                put_payload = {
+                    "product": {
+                        "id": product_id,
+                        "handle": handle_cleaned,
+                        "body_html": body_html_final
                     }
-                    
-                    try:
-                        def put_call():
-                            return requests.put(put_url, json=put_payload, headers=headers, timeout=15)
-                        put_res = await loop.run_in_executor(None, put_call)
-                        if put_res.status_code == 200:
-                            print("[PUT UPDATE COPY] Copy atualizada com sucesso no CDN da Shopify!")
-                        else:
-                            print(f"[PUT UPDATE COPY] Erro ao atualizar copy: Código {put_res.status_code} - {put_res.text}")
-                    except Exception as e_put:
-                        print(f"[PUT UPDATE COPY] Falha ao fazer PUT de atualização: {e_put}")
+                }
+                
+                try:
+                    def put_call():
+                        return requests.put(put_url, json=put_payload, headers=headers, timeout=15)
+                    put_res = await loop.run_in_executor(None, put_call)
+                    if put_res.status_code == 200:
+                        print("[PUT UPDATE COPY] Copy atualizada com sucesso no CDN da Shopify!")
+                    else:
+                        print(f"[PUT UPDATE COPY] Erro ao atualizar copy: Código {put_res.status_code} - {put_res.text}")
+                except Exception as e_put:
+                    print(f"[PUT UPDATE COPY] Falha ao fazer PUT de atualização: {e_put}")
             
             admin_url = f"https://admin.shopify.com/store/{shop_name}/products/{product_id}"
             return {
